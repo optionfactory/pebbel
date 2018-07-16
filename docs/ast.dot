@@ -1,0 +1,25 @@
+digraph AST {
+
+BooleanExpression -> Expression;
+
+StringExpression -> Expression;
+
+NumberExpression -> Expression;
+NumberLiteral -> NumberExpression;
+
+
+FunctionCall -> BooleanExpression;
+FunctionCall -> StringExpression;
+FunctionCall -> NumberExpression;
+
+
+ShortCircuitingBoooleanExpression -> BooleanExpression;
+
+StringLiteral -> StringExpression;
+
+
+
+Variable -> BooleanExpression;
+Variable -> StringExpression;
+Variable -> NumberExpression;
+}
