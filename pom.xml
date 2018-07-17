@@ -4,7 +4,7 @@
     <groupId>net.optionfactory</groupId>
     <artifactId>pebbel</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>An expression language designed for embedding in java projects</description>
     <url>https://github.com/optionfactory/pebbel</url>
