@@ -4,42 +4,8 @@
     <groupId>net.optionfactory</groupId>
     <artifactId>pebbel</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>1.0</version>
+    <version>0.9</version>
     <packaging>jar</packaging>
-    <description>An expression language designed for embedding in java projects</description>
-    <url>https://github.com/optionfactory/pebbel</url>
-    <licenses>
-        <license>
-            <name>Simplified BSD License</name>
-            <url>http://www.opensource.org/licenses/BSD-3-Clause</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-    <developers>
-        <developer>
-            <name>Roberto Ferranti</name>
-            <email>roberto.ferranti@optionfactory.net</email>
-            <organization>OptionFactory</organization>
-            <organizationUrl>http://optionfactory.net</organizationUrl>
-        </developer>
-    </developers>
-    <scm>
-        <connection>scm:git:https://github.com/optionfactory/pebbel.git</connection>
-        <developerConnection>scm:git:https://github.com/optionfactory/pebbel.git</developerConnection>
-        <url>https://github.com/optionfactory/pebbel</url>
-    </scm>
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-    
-    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -61,7 +27,7 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>codemirror</artifactId>
-            <version>5.33.0</version>
+            <version>5.24.2</version>
             <optional>true</optional>
         </dependency>
     </dependencies>
@@ -92,57 +58,14 @@
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-            <id>ossrh</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-source-plugin</artifactId>
-                        <version>3.0.1</version>
-                        <executions>
-                            <execution>
-                                <id>attach-sources</id>
-                                <goals>
-                                    <goal>jar-no-fork</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.0.1</version>
-                        <executions>
-                            <execution>
-                                <id>attach-javadocs</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                                <configuration>
-                                    <additionalparam>-Xdoclint:none</additionalparam>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-    
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <url>http://teletraan:8081/repository/maven-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus</id>
+            <url>http://teletraan:8081/repository/maven-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>

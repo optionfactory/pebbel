@@ -50,6 +50,7 @@ public class Bindings<K, V, D> {
         return new Bindings<>(self, descriptors, parent);
     }
 
+
     public Bindings<K, V, D> overlaying(Bindings<K, V, D> parent) {
         final Deque<Bindings<K, V, D>> hierarchy = new LinkedList<>();
         Bindings<K, V, D> root = this;
@@ -79,22 +80,22 @@ public class Bindings<K, V, D> {
         return children.overlaying(this);
     }
 
-    public Maybe<V> value(K key) {
+    public Optional<V> value(K key) {
         if (self.containsKey(key)) {
-            return Maybe.just(self.get(key));
+            return Optional.of(self.get(key));
         }
         if (!parent.isPresent()) {
-            return Maybe.nothing();
+            return Optional.empty();
         }
         return parent.get().value(key);
     }
 
-    public Maybe<D> descriptor(K key) {
+    public Optional<D> descriptor(K key) {
         if (descriptors.containsKey(key)) {
-            return Maybe.just(descriptors.get(key));
+            return Optional.of(descriptors.get(key));
         }
         if (!parent.isPresent()) {
-            return Maybe.nothing();
+            return Optional.empty();
         }
         return parent.get().descriptor(key);
     }

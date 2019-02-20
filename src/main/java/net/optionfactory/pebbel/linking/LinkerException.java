@@ -1,9 +1,9 @@
 package net.optionfactory.pebbel.linking;
 
-import java.util.List;
+import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.ast.Source;
 import net.optionfactory.pebbel.results.LanguageException;
-import net.optionfactory.pebbel.results.Problem;
+import java.util.List;
 
 public class LinkerException extends LanguageException {
 

@@ -27,7 +27,7 @@ public class MethodHandleFunction implements Function {
 
     @Override
     public String toString() {
-        return String.format("MethodHandleFunction(%s %s.%s(%s))", method.getReturnType(), method.getDeclaringClass().getSimpleName(), method.getName(), Arrays.toString(method.getParameterTypes()));
+        return String.format("BuiltinFunctionHandler(%s %s.%s(%s))", method.getReturnType(), method.getDeclaringClass().getSimpleName(), method.getName(), Arrays.toString(method.getParameterTypes()));
     }
 
 }

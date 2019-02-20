@@ -1,7 +1,7 @@
 package net.optionfactory.pebbel.ast;
 
 /**
- * A number literal.
+ * A number literal. 
  */
 public class NumberLiteral implements NumberExpression {
 

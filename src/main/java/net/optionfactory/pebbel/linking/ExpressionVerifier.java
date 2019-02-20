@@ -1,38 +1,38 @@
 package net.optionfactory.pebbel.linking;
 
-import java.util.ArrayList;
-import java.util.List;
+import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.ast.BooleanExpression;
 import net.optionfactory.pebbel.ast.Expression;
 import net.optionfactory.pebbel.ast.FunctionCall;
 import net.optionfactory.pebbel.ast.NumberExpression;
 import net.optionfactory.pebbel.ast.NumberLiteral;
 import net.optionfactory.pebbel.ast.ShortCircuitExpression;
-import net.optionfactory.pebbel.ast.Source;
 import net.optionfactory.pebbel.ast.StringExpression;
 import net.optionfactory.pebbel.ast.StringLiteral;
 import net.optionfactory.pebbel.ast.Variable;
 import net.optionfactory.pebbel.linking.ExpressionVerifier.Request;
-import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
+import java.util.ArrayList;
+import java.util.List;
+import net.optionfactory.pebbel.ast.Source;
+import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.loading.FunctionDescriptor.ParameterDescriptor;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
-import net.optionfactory.pebbel.results.Problem;
 
 /**
  * An AST visitor verifying every symbol referenced can be linked to.
  * Accumulates linking problems.
  */
-public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Request<VDMD>> {
+public class ExpressionVerifier implements Expression.Visitor<Class<?>, Request> {
 
-    public static class Request<VDMD> {
+    public static class Request {
 
-        public Descriptors<VDMD> descriptors;
+        public Descriptors descriptors;
         public Class<?> expected;
         public List<Problem> problems;
 
-        public static <VDMD> Request<VDMD> of(Descriptors<VDMD> descriptors, Class<?> expected, List<Problem> problems) {
-            final Request<VDMD> request = new Request<>();
+        public static Request of(Descriptors descriptors, Class<?> expected, List<Problem> problems) {
+            final Request request = new Request();
             request.problems = problems;
             request.expected = expected;
             request.descriptors = descriptors;
@@ -40,7 +40,7 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
         }
     }
 
-    public List<Problem> verify(Descriptors<VDMD> descriptors, Expression expression, Class<?> expected) {
+    public List<Problem> verify(Descriptors descriptors, Expression expression, Class<?> expected) {
         final List<Problem> problems = new ArrayList<>();
         final Class<?> got = expression.accept(this, Request.of(descriptors, expected, problems));
         if (!TypeChecks.isAssignable(expected, got)) {
@@ -50,12 +50,12 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
     }
 
     @Override
-    public Class<?> visit(Expression node, Request<VDMD> request) {
+    public Class<?> visit(Expression node, Request request) {
         return node.accept(this, request);
     }
 
     @Override
-    public Class<?> visit(StringExpression node, Request<VDMD> request) {
+    public Class<?> visit(StringExpression node, Request request) {
         final Class<?> type = node.accept(this, request);
         if (!String.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: image*/ null, null, String.class, type));
@@ -64,7 +64,7 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
     }
 
     @Override
-    public Class<?> visit(BooleanExpression node, Request<VDMD> request) {
+    public Class<?> visit(BooleanExpression node, Request request) {
         final Class<?> type = node.accept(this, request);
         if (!Boolean.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: string*/ null, null, Boolean.class, type));
@@ -73,7 +73,7 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
     }
 
     @Override
-    public Class<?> visit(NumberExpression node, Request<VDMD> request) {
+    public Class<?> visit(NumberExpression node, Request request) {
         final Class<?> type = node.accept(this, request);
         if (!Double.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: string*/ null, null, Double.class, type));
@@ -82,26 +82,26 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
     }
 
     @Override
-    public Class<?> visit(NumberLiteral node, Request<VDMD> request) {
+    public Class<?> visit(NumberLiteral node, Request request) {
         return Double.class;
     }
 
     @Override
-    public Class<?> visit(Variable node, Request<VDMD> request) {
+    public Class<?> visit(Variable node, Request request) {
         if (!request.descriptors.variables.containsKey(node.name)) {
             request.problems.add(UNKNOWN_SYMBOL(node.source, node.name));
         }
-        final VariableDescriptor<VDMD> var = request.descriptors.variables.get(node.name);
+        final VariableDescriptor var = request.descriptors.variables.get(node.name);
         return var != null ? var.type : UnknownType.class;
     }
 
     @Override
-    public Class<?> visit(StringLiteral node, Request<VDMD> request) {
+    public Class<?> visit(StringLiteral node, Request request) {
         return String.class;
     }
 
     @Override
-    public Class<?> visit(FunctionCall node, Request<VDMD> request) {
+    public Class<?> visit(FunctionCall node, Request request) {
         final Class<?>[] argumentTypes = new Class<?>[node.arguments.length];
         for (int i = 0; i != node.arguments.length; ++i) {
             argumentTypes[i] = node.arguments[i].accept(this, request);
@@ -139,7 +139,7 @@ public class ExpressionVerifier<VDMD> implements Expression.Visitor<Class<?>, Re
     }
 
     @Override
-    public Class<?> visit(ShortCircuitExpression node, Request<VDMD> request) {
+    public Class<?> visit(ShortCircuitExpression node, Request request) {
         for (BooleanExpression term : node.terms) {
             final Class<?> termType = term.accept(this, request);
             if (!Boolean.class.equals(termType)) {

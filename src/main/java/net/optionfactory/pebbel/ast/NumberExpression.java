@@ -2,7 +2,8 @@ package net.optionfactory.pebbel.ast;
 
 /**
  * An expression evaluating as a Double. Can be either a number literal (e.g.:
- * {@code 123.4} or a function returning a Double {@code num("123")}.
+ * {@code 123.4} or a function returning a Double
+ * {@code num("123")}.
  */
 public interface NumberExpression extends Expression {
 

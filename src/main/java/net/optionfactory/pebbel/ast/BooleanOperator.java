@@ -5,6 +5,7 @@ package net.optionfactory.pebbel.ast;
  */
 public enum BooleanOperator {
 
+
     AND, OR;
 
     public boolean shouldShortCircuit(boolean lhs) {

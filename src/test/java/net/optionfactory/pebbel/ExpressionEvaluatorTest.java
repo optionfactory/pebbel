@@ -1,19 +1,19 @@
 package net.optionfactory.pebbel;
 
-import java.io.StringReader;
 import net.optionfactory.pebbel.ast.BooleanExpression;
 import net.optionfactory.pebbel.execution.ExpressionEvaluator;
+import java.io.StringReader;
 import net.optionfactory.pebbel.parsing.JavaccParser;
 import net.optionfactory.pebbel.parsing.ParseException;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class ExpressionEvaluatorTest {
-
+ 
     private boolean evalBool(String text) throws ParseException {
-        final ExpressionEvaluator<Object, Object> ce = new ExpressionEvaluator<>();
+        final ExpressionEvaluator ce = new ExpressionEvaluator();
         final JavaccParser parser = new JavaccParser(new StringReader(text));
-        final BooleanExpression expression = parser.booleanExpression();
+        final BooleanExpression expression = parser.terminalBooleanExpression();
         return ce.visit(expression, BindingsMother.SYMBOLS);
     }
 

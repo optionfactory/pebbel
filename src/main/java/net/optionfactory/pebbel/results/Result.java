@@ -17,6 +17,7 @@ public class Result<V> {
     private final List<Problem> errors;
     private final V value;
 
+
     public Result(List<Problem> errors, V value) {
         this.errors = errors;
         this.value = value;

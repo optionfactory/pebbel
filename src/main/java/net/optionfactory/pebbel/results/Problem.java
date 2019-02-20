@@ -2,7 +2,7 @@ package net.optionfactory.pebbel.results;
 
 import java.util.Optional;
 
-public class Problem {
+ public class Problem {
 
     public final String type;
     public final String reason;
@@ -24,7 +24,7 @@ public class Problem {
     public static Problem of(String type, String reason, Object details) {
         return new Problem(type, reason, details, Optional.empty());
     }
-
+    
     public static Problem of(String type, String reason, Object details, Throwable throwable) {
         return new Problem(type, reason, details, Optional.of(throwable));
     }

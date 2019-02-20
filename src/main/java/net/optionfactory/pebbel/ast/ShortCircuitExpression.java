@@ -1,5 +1,4 @@
 package net.optionfactory.pebbel.ast;
-
 /*
  * A short circuited boolean expression. (e.g: {@code a() && b()})
  */

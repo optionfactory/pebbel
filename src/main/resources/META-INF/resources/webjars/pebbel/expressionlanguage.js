@@ -1,8 +1,8 @@
 Ext.define('pebbel.ExpressionLanguageCodeMirrorMode', {
     lexicalContexts: {
         DEFAULT: 0,
-        IN_STRING_LITERAL_DOUBLE_QUOTED: 1,
-        IN_STRING_LITERAL_SINGLE_QUOTED: 2
+        IN_DOUBLE_QUOTE_STRING_LITERAL: 1,
+        IN_SINGLE_QUOTE_STRING_LITERAL: 2
     },
     completionTitleTemplate: new Ext.XTemplate(
             '<tpl if="values.descriptorType == \'function\'">',
@@ -40,14 +40,14 @@ Ext.define('pebbel.ExpressionLanguageCodeMirrorMode', {
         var all = vars.concat(funs);
         var filtered = all.filter(function (v) {
             var tokenImageUpToCurrent = token.string.substr(0, cursor.ch - token.start);
-            var notInPrefixCompletion = token.string !== ')' && token.type !== 'variable-name' && token.type !== 'function-name';
+            var notInPrefixCompletion = token.string !== ')' && token.type !== 'var' && token.type !== 'function-name';
             var tokenNameMatchesDescriptor = v.name.indexOf(tokenImageUpToCurrent) === 0 && v.name !== tokenImageUpToCurrent;
             return notInPrefixCompletion || tokenNameMatchesDescriptor;
         });
         if (filtered.length === 0) {
             filtered = all.filter(function (v) {
                 //in case nothing matches, we just match by type
-                return token.type === (v.descriptorType === 'variable' ? 'variable-name' : 'function-name');
+                return token.type === (v.descriptorType === 'variable' ? 'var' : 'function-name');
             });
         }
         var sortedByName = filtered.sort(function (lhs, rhs) {
@@ -63,7 +63,7 @@ Ext.define('pebbel.ExpressionLanguageCodeMirrorMode', {
                     {tag: 'div', html: d.help}
                 ],
                 text: shouldAddParenthesis ? d.name + "()" : d.name,
-                append: token.type !== (d.descriptorType === 'variable' ? 'variable-name' : 'function-name'),
+                append: token.type !== (d.descriptorType === 'variable' ? 'var' : 'function-name'),
                 classes: 'hint-' + d.descriptorType,
                 type: d.descriptorType,
                 displayText: d.descriptorType === 'function' ? d.name + "()" : d.name,
@@ -103,15 +103,15 @@ Ext.define('pebbel.ExpressionLanguageCodeMirrorMode', {
                             //TODO: failure
                         }
                     });
-                });
+                })
                 break;
             }
-            case this.lexicalContexts.IN_STRING_LITERAL_SINGLE_QUOTED:
+            case this.lexicalContexts.IN_SINGLE_QUOTE_STRING_LITERAL:
                 callback_hints([
                     {text: "'", append: true, help: ''}
                 ]);
                 break;
-            case this.lexicalContexts.IN_STRING_LITERAL_DOUBLE_QUOTED:
+            case this.lexicalContexts.IN_DOUBLE_QUOTE_STRING_LITERAL:
                 callback_hints([
                     {text: '"', append: true, help: ''}
                 ]);
@@ -130,57 +130,57 @@ Ext.define('pebbel.ExpressionLanguageCodeMirrorMode', {
                     return 'spaces';
                 }
                 if (stream.match(/^[A-Z][A-Z0-9_:]*/)) {
-                    return 'variable-name';
+                    return 'var';
                 }
                 if (stream.match(/^[a-z][a-zA-Z0-9_?!:]*/)) {
                     return 'function-name';
                 }
                 if (stream.match(/^[0-9]+(\.[0-9]*)?/)) {
-                    return 'number-literal';
+                    return 'number';
                 }
                 if (stream.match(/^,/)) {
-                    return 'comma';
+                    return 'function-argument-separator';
                 }
-                if (stream.match(/^&&/)) {
-                    return 'boolean-operator-and';
+                if (stream.match(/^&&/) || stream.match(/^\|\|/)) {
+                    return 'boolean-operator';
                 }
-                if (stream.match(/^\|\|/)) {
-                    return 'boolean-operator-or';
+                if (stream.match(/^&/)) {
+                    return 'reference';
                 }
                 if (stream.match(/^[()]/)) {
-                    return 'parenthesis';
+                    return 'parens';
                 }
                 if (stream.match(/^'/)) {
                     state.oldlc = state.lc;
-                    state.lc = this.lexicalContexts.IN_STRING_LITERAL_SINGLE_QUOTED;
-                    return 'string-literal-single-quoted-start';
+                    state.lc = this.lexicalContexts.IN_SINGLE_QUOTE_STRING_LITERAL;
+                    return 'single-quote-string-literal-start';
                 }
                 if (stream.match(/^"/)) {
                     state.oldlc = state.lc;
-                    state.lc = this.lexicalContexts.IN_STRING_LITERAL_DOUBLE_QUOTED;
-                    return 'string-literal-double-quoted-start';
+                    state.lc = this.lexicalContexts.IN_DOUBLE_QUOTE_STRING_LITERAL;
+                    return 'double-quote-string-literal-start';
                 }
                 stream.skipToEnd();
                 state.lc = this.lexicalContexts.DEFAULT;
                 return 'error';
-            case this.lexicalContexts.IN_STRING_LITERAL_SINGLE_QUOTED:
+            case this.lexicalContexts.IN_SINGLE_QUOTE_STRING_LITERAL:
                 if (stream.match(/^(?:(?:\\')|[^'])+/)) {
-                    return 'string-literal-single-quoted';
+                    return 'single-quote-string-literal';
                 }
                 if (stream.match(/^'/)) {
                     state.lc = state.oldlc;
                     state.oldlc = undefined;
-                    return 'string-literal-single-quoted-end';
+                    return 'single-quote-string-literal-end';
                 }
                 //never happens
-            case this.lexicalContexts.IN_STRING_LITERAL_DOUBLE_QUOTED:
+            case this.lexicalContexts.IN_DOUBLE_QUOTE_STRING_LITERAL:
                 if (stream.match(/^(?:(?:\\")|[^"])+/)) {
-                    return 'string-literal-double-quoted';
+                    return 'double-quote-string-literal';
                 }
                 if (stream.match(/^"/)) {
                     state.lc = state.oldlc;
                     state.oldlc = undefined;
-                    return 'string-literal-double-quoted-end';
+                    return 'double-quote-string-literal-end';
                 }
                 //never happens
             default:
@@ -516,7 +516,7 @@ Ext.define('pebbel.Autocompletion', {
         } else {
             this.cm.replaceRange(completion.text, {line: line, ch: completion.append ? token.end : token.start}, {line: line, ch: token.end});
             if (completion.offsetCursor) {
-                this.cm.setCursor({line: line, ch: (completion.offsetCursor < 0 ? token.end + completion.text.length : (completion.append ? token.end : token.start)) + completion.offsetCursor});
+                this.cm.setCursor({line: line, ch: (completion.offsetCursor < 0 ? token.end + completion.text.length : (completion.append ? token.end : token.start)) + completion.offsetCursor})
             }
         }
         this.close();

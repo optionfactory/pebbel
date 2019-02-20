@@ -2,15 +2,15 @@ package net.optionfactory.pebbel.loading;
 
 import net.optionfactory.pebbel.execution.Function;
 
-public class Symbols<VV, VDMD> {
+public class Symbols {
 
     public Bindings<String, Function, FunctionDescriptor> functions;
-    public Bindings<String, VV, VariableDescriptor<VDMD>> variables;
+    public Bindings<String, Object, VariableDescriptor> variables;
 
-    public static <VV, VDMD> Symbols<VV, VDMD> of(
+    public static Symbols of(
             Bindings<String, Function, FunctionDescriptor> functions,
-            Bindings<String, VV, VariableDescriptor<VDMD>> variables) {
-        Symbols<VV, VDMD> s = new Symbols<>();
+            Bindings<String, Object, VariableDescriptor> variables) {
+        Symbols s = new Symbols();
         s.functions = functions;
         s.variables = variables;
         return s;

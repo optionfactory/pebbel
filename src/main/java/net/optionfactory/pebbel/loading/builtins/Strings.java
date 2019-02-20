@@ -70,13 +70,13 @@ public class Strings {
     public static String at(String source, double begin, double end) {
         return source.substring((int) begin, (int) end);
     }
-
+    
     @BindingHandler("str:concat")
     @BindingDoc("concats a list of strings")
     public static String concat(String first, String... others) {
         return first + Stream.of(others).collect(Collectors.joining());
     }
-
+    
     @BindingHandler("str:join")
     @BindingDoc("joins a list of strings divided by a separator")
     public static String join(String separator, String first, String... others) {

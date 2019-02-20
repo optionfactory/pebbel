@@ -49,8 +49,8 @@ public class TypeChecks {
         return lhs.isAssignableFrom(rhs);
     }
 
-    private static final Map<Class<?>, Class<?>> PRIMITIVE_TO_BOXED = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Class<?>> BOXED_TO_PRIMITIVE = new ConcurrentHashMap<>();
+    private static final Map<Class, Class> PRIMITIVE_TO_BOXED = new ConcurrentHashMap<>();
+    private static final Map<Class, Class> BOXED_TO_PRIMITIVE = new ConcurrentHashMap<>();
 
     static {
         PRIMITIVE_TO_BOXED.put(boolean.class, Boolean.class);
@@ -63,7 +63,7 @@ public class TypeChecks {
         PRIMITIVE_TO_BOXED.put(float.class, Float.class);
         PRIMITIVE_TO_BOXED.put(void.class, Void.class);
 
-        for (Map.Entry<Class<?>, Class<?>> entry : PRIMITIVE_TO_BOXED.entrySet()) {
+        for (Map.Entry<Class, Class> entry : PRIMITIVE_TO_BOXED.entrySet()) {
             BOXED_TO_PRIMITIVE.put(entry.getValue(), entry.getKey());
         }
     }

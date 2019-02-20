@@ -5,11 +5,11 @@ import net.optionfactory.pebbel.execution.ExpressionEvaluator;
 import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.results.Result;
 
-public class PebbelEvaluator<VV, VDMD> implements Evaluator<VV, VDMD> {
+public class PebbelEvaluator implements Evaluator {
 
     @Override
-    public <R> Result<R> evaluate(Symbols<VV, VDMD> symbols, Expression expression, Class<R> expected) {
-        final ExpressionEvaluator<VV, VDMD> evaluator = new ExpressionEvaluator<>();
+    public <R> Result<R> evaluate(Symbols symbols, Expression expression, Class<R> expected) {
+        final ExpressionEvaluator evaluator = new ExpressionEvaluator();
         return evaluator.evaluate(symbols, expression);
     }
 

@@ -1,8 +1,8 @@
 package net.optionfactory.pebbel.ast;
 
 /**
- * An AST node referencing a variable. Variables are always in uppercase. (e.g.:
- * {@code VAR1})
+ * An AST node referencing a variable. Variables
+ * are always in uppercase. (e.g.: {@code VAR1})
  */
 public class Variable implements BooleanExpression, StringExpression, NumberExpression {
 

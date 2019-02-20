@@ -9,6 +9,7 @@ import java.util.stream.Stream;
  */
 public class FunctionDescriptor {
 
+
     public Class<?> returnType;
     public String name;
     public int arity;
@@ -59,6 +60,6 @@ public class FunctionDescriptor {
             return fp;
         }
 
-    }
+    }    
 
 }
