@@ -3,10 +3,10 @@ package net.optionfactory.pebbel;
 import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.loading.Symbols;
 
-public interface Loader<C1, C2, VV, VDMD> {
+public interface Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> {
 
-    Descriptors<VDMD> descriptors(C1 context, FunctionsLoader fl);
+    Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context, FunctionsLoader fl);
 
-    Symbols<VV, VDMD> symbols(C2 context, FunctionsLoader fl);
+    Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols(EVALUATION_CONTEXT context, FunctionsLoader fl);
 
 }

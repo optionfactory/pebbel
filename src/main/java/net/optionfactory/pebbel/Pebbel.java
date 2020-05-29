@@ -7,15 +7,15 @@ import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 
-public class Pebbel<C1, C2, VV, VDMD> {
+public class Pebbel<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> {
 
     private final Parser parser;
-    private final Linker<VDMD> linker;
-    private final Loader<C1, C2, VV, VDMD> loader;
-    private final Evaluator<VV, VDMD> evaluator;
+    private final Linker<VAR_METADATA_TYPE> linker;
+    private final Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader;
+    private final Evaluator<VAR_TYPE, VAR_METADATA_TYPE> evaluator;
     private final FunctionsLoader fl;
 
-    public Pebbel(Parser parser, Linker<VDMD> linker, Loader<C1, C2, VV, VDMD> loader, Evaluator<VV, VDMD> evaluator, FunctionsLoader fl) {
+    public Pebbel(Parser parser, Linker<VAR_METADATA_TYPE> linker, Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader, Evaluator<VAR_TYPE, VAR_METADATA_TYPE> evaluator, FunctionsLoader fl) {
         this.parser = parser;
         this.linker = linker;
         this.loader = loader;
@@ -23,15 +23,15 @@ public class Pebbel<C1, C2, VV, VDMD> {
         this.fl = fl;
     }
 
-    public static <CTX1, CTX2, VV, VDMD> Pebbel<CTX1, CTX2, VV, VDMD> defaults(Loader<CTX1, CTX2, VV, VDMD> loader) {
+    public static <VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> Pebbel<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> defaults(Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader) {
         return new Pebbel<>(new PebbelParser(), new PebbelLinker<>(), loader, new PebbelEvaluator<>(), new PebbelFunctionsLoader());
     }
 
-    public Descriptors<VDMD> descriptors(C1 context) {
+    public Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context) {
         return loader.descriptors(context, fl);
     }
 
-    public List<Problem> verify(C1 context, String expression, Class<?> expectedType) {
+    public List<Problem> verify(VERIFICATION_CONTEXT context, String expression, Class<?> expectedType) {
         final Result<Expression> expressionResult = parser.parse(expression, expectedType);
         if (expressionResult.isError()) {
             return expressionResult.getErrors();
@@ -39,8 +39,8 @@ public class Pebbel<C1, C2, VV, VDMD> {
         return linker.link(loader.descriptors(context, fl), expressionResult.getValue(), expectedType);
     }
 
-    public <T> Result<T> evaluate(C2 context, String source, Class<T> expectedType) {
-        final Symbols<VV, VDMD> symbols = loader.symbols(context, fl);
+    public <T> Result<T> evaluate(EVALUATION_CONTEXT context, String source, Class<T> expectedType) {
+        final Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols = loader.symbols(context, fl);
         final Result<Expression> parsed = parser.parse(source, expectedType);
         if (parsed.isError()) {
             return parsed.mapErrors();

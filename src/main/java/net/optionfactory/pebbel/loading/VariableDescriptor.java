@@ -6,11 +6,11 @@ import java.util.Objects;
  * Describes a variable that can be referenced from the DSL.
  * {@code FunctionDescriptor}s are generally created by the {@code Loader}.
  */
-public class VariableDescriptor<VDMD> {
+public class VariableDescriptor<VAR_METADATA_TYPE> {
 
     public String name;
     public Class<?> type;
-    public VDMD metadata;
+    public VAR_METADATA_TYPE metadata;
 
     public static <VDMD> VariableDescriptor<VDMD> of(String name, Class<?> type, VDMD metadata) {
         final VariableDescriptor<VDMD> vd = new VariableDescriptor<>();

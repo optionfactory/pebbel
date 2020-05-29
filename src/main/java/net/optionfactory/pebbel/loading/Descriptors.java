@@ -2,13 +2,13 @@ package net.optionfactory.pebbel.loading;
 
 import java.util.Map;
 
-public class Descriptors<VDMD> {
+public class Descriptors<VAR_METADATA_TYPE> {
 
     public Map<String, FunctionDescriptor> functions;
-    public Map<String, VariableDescriptor<VDMD>> variables;
+    public Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variables;
 
-    public static <VV, VDMD> Descriptors<VDMD> from(Symbols<VV, VDMD> symbols) {
-        Descriptors<VDMD> self = new Descriptors<>();
+    public static <VAR_TYPE, VAR_METADATA_TYPE> Descriptors<VAR_METADATA_TYPE> from(Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+        final Descriptors<VAR_METADATA_TYPE> self = new Descriptors<>();
         self.functions = symbols.functions.descriptors();
         self.variables = symbols.variables.descriptors();
         return self;
