@@ -122,7 +122,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
             if (!descriptor.vararg || parameterIndex != descriptor.parameters.length - 1) {
                 final Class<?> argumentType = argumentTypes[parameterIndex];
                 if (!TypeChecks.isAssignable(parameter.type, argumentType)) {
-                    request.problems.add(TYPE_MISMATCH(node.source, node.function, parameterIndex, parameter, argumentType));
+                    request.problems.add(TYPE_MISMATCH(node.source, node.function, parameterIndex, parameter.type, argumentType));
                 }
                 continue;
             }
