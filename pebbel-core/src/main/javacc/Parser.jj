@@ -1,0 +1,226 @@
+options {
+    STATIC = false;
+    UNICODE_INPUT = true;
+}
+
+PARSER_BEGIN(JavaccParser)
+package net.optionfactory.pebbel.parsing;
+import java.io.Serializable;
+import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
+import net.optionfactory.pebbel.parsing.ast.BooleanOperator;
+import net.optionfactory.pebbel.parsing.ast.Expression;
+import net.optionfactory.pebbel.parsing.ast.FunctionCall;
+import net.optionfactory.pebbel.parsing.ast.NumberExpression;
+import net.optionfactory.pebbel.parsing.ast.NumberLiteral;
+import net.optionfactory.pebbel.parsing.ast.ShortCircuitExpression;
+import net.optionfactory.pebbel.parsing.ast.Source;
+import net.optionfactory.pebbel.parsing.ast.StringExpression;
+import net.optionfactory.pebbel.parsing.ast.StringLiteral;
+import net.optionfactory.pebbel.parsing.ast.Variable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class JavaccParser {
+
+    private Source source(Token t) {
+        return Source.of(t.beginLine, t.beginColumn, t.endLine, t.endColumn);
+    }
+
+    private Source source(Source start, Source end) {
+        return Source.of(start.row, start.col, end.endRow, end.endCol);
+    }
+
+    private Source source(Token l, Token r) {
+        return Source.of(l.beginLine, l.beginColumn, r.endLine, r.endColumn);
+    }
+
+
+    public Expression parse(Class<?> expectedType) throws ParseException {
+        if (expectedType == Boolean.class) {
+            return booleanExpression();
+        } 
+        if (expectedType == String.class || expectedType == CharSequence.class) {
+            return stringExpression();
+        } 
+        if (expectedType == Double.class || expectedType == Number.class) {
+            return numberExpression();
+        } 
+        if(expectedType == Object.class || expectedType == Serializable.class || expectedType == Comparable.class){
+            return anyTypeExpression();
+        }
+        return anyOtherTypeExpression();
+    }
+}
+PARSER_END(JavaccParser)
+
+
+TOKEN_MGR_DECLS:
+{
+    private int lexerState;
+}
+
+<DEFAULT> TOKEN: {
+      <VARIABLE_NAME: ["A"-"Z"](["A"-"Z","0"-"9","_", ":"])*>
+    | <FUNCTION_NAME: ["a"-"z"](["a"-"z","A"-"Z","0"-"9","_", "?", "!", ":"])*>
+    | <NUMBER_LITERAL: (["0"-"9"])+("." (["0"-"9"])*)?>
+    | <LEFT_PARENTHESIS: "(">
+    | <RIGHT_PARENTHESIS: ")">
+    | <AND: "&&" >
+    | <OR: "||" >
+    | <COMMA: "," >
+    | <STRING_LITERAL_DOUBLE_QUOTED_START: "\""> { this.lexerState = curLexState; }: IN_STRING_LITERAL_DOUBLE_QUOTED
+    | <STRING_LITERAL_SINGLE_QUOTED_START: "'"> { this.lexerState = curLexState; }: IN_STRING_LITERAL_SINGLE_QUOTED
+}
+
+<IN_STRING_LITERAL_DOUBLE_QUOTED> TOKEN: {
+      <STRING_LITERAL_DOUBLE_QUOTED_END: "\""> { SwitchTo(this.lexerState); }
+    | <STRING_LITERAL_DOUBLE_QUOTED: (~["\""]|"\\\"")+ > { matchedToken.image = matchedToken.image.replace("\\\"", "\""); }
+}
+
+
+<IN_STRING_LITERAL_SINGLE_QUOTED> TOKEN: {
+      <STRING_LITERAL_SINGLE_QUOTED_END: "'"> { SwitchTo(this.lexerState); }
+    | <STRING_LITERAL_SINGLE_QUOTED: (~["'"]|"\\'")+ > { matchedToken.image = matchedToken.image.replace("\\'", "'"); }
+}
+
+<DEFAULT> SKIP: {
+    "\t"|" "|"\r"|"\n"
+}
+
+ <*> TOKEN : { 
+    <UNKNOWN: ~[]> 
+}
+
+BooleanExpression booleanExpression():
+{
+    BooleanExpression result;
+}
+{
+    result=_booleanExpression() <EOF>
+    { return result; }
+}
+
+StringExpression stringExpression():
+{
+    StringExpression result;
+}
+{
+    result=_stringExpression() <EOF>
+    { return result; }
+}
+
+NumberExpression numberExpression():
+{
+    NumberExpression result;
+}
+{
+    result=_numberExpression() <EOF>
+    { return result; }
+}
+
+Expression anyTypeExpression():
+{
+    Expression result;
+}
+{
+    (result=_expression()) <EOF>
+    { return result; }
+}
+
+Expression anyOtherTypeExpression():
+{
+    Expression result;
+}
+{
+    (result=_variable() | result=_functionCall()) <EOF>
+    { return result; }
+}
+
+
+
+BooleanExpression _booleanExpression():
+{
+    BooleanExpression e;
+}
+{
+    ( LOOKAHEAD(_shortCircuitingBooleanExpression()) e=_shortCircuitingBooleanExpression()| e=_functionCall() | e=_variable())
+    { return e; }
+}
+
+BooleanExpression _shortCircuitingBooleanExpression():
+{
+    Token op=null;
+    BooleanExpression firstTerm=null, term=null;
+    List<BooleanExpression> terms = new ArrayList<BooleanExpression>();
+    List<BooleanOperator> operators = new ArrayList<BooleanOperator>();
+}
+{
+        ( firstTerm=_booleanExpressionTerm() {terms.add(firstTerm); })
+        ( ( op=<AND>|op=<OR> ) term = _booleanExpressionTerm() {operators.add(op.kind == AND ? BooleanOperator.AND : BooleanOperator.OR); terms.add(term); })+
+
+    { if(operators.isEmpty()) return firstTerm; return ShortCircuitExpression.of(operators.toArray(new BooleanOperator[operators.size()]), terms.toArray(new BooleanExpression[terms.size()]), source(firstTerm.source(), terms != null ? term.source() : firstTerm.source()));  }
+}
+
+StringExpression _stringExpression():
+{ StringExpression e;}
+{
+    ( e=_variable() | e=_functionCall() | e=_stringLiteral() )
+    { return e; }
+}
+
+NumberExpression _numberExpression():
+{ NumberExpression e;}
+{
+    ( e=_variable() | e=_numberLiteral() | e=_functionCall())
+    { return e; }
+}
+
+FunctionCall _functionCall():
+{ Token ct,end; Expression e; List<Expression> es = new ArrayList<Expression>(); }
+{
+    ct=<FUNCTION_NAME>
+    <LEFT_PARENTHESIS>
+        [
+            e=_expression() { es.add(e); }
+            ( <COMMA> e=_expression() { es.add(e); })*
+        ]
+    end=<RIGHT_PARENTHESIS>
+    { return FunctionCall.of(ct.image, es.toArray(new Expression[es.size()]), source(ct, end)); }
+}
+
+BooleanExpression _booleanExpressionTerm():
+{BooleanExpression e; }
+{
+    ((<LEFT_PARENTHESIS> e=_shortCircuitingBooleanExpression() <RIGHT_PARENTHESIS> ) | e=_functionCall() | e=_variable() )
+    {return e;}
+}
+
+Expression _expression():
+{ Expression e = null;}
+{
+    
+    ( LOOKAHEAD(_shortCircuitingBooleanExpression()) e=_shortCircuitingBooleanExpression() | e = _functionCall() | e = _variable() | e=_stringLiteral() | e=_numberLiteral())
+    { return e;}
+}
+
+Variable _variable():
+{ Token t; }
+{
+    t=<VARIABLE_NAME> { return Variable.of(t.image, source(t)); }
+}
+
+StringLiteral _stringLiteral():
+{ Token t=null, e;}
+{
+    (
+        <STRING_LITERAL_DOUBLE_QUOTED_START> (t=<STRING_LITERAL_DOUBLE_QUOTED>)? e=<STRING_LITERAL_DOUBLE_QUOTED_END>
+      | <STRING_LITERAL_SINGLE_QUOTED_START> (t=<STRING_LITERAL_SINGLE_QUOTED>)? e=<STRING_LITERAL_SINGLE_QUOTED_END>
+    )
+    {return StringLiteral.of(t != null ? t.image : "", t != null ? source(t): source(e));}
+}
+
+NumberLiteral _numberLiteral():
+{ Token t; }
+{
+    t=<NUMBER_LITERAL> { return NumberLiteral.of(Double.parseDouble(t.image.trim()), source(t)); }
+}

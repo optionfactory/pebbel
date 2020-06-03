@@ -4,8 +4,8 @@
     <groupId>net.optionfactory</groupId>
     <artifactId>pebbel</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>1.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <version>2.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <description>An expression language designed for embedding in java projects</description>
     <url>https://github.com/optionfactory/pebbel</url>
     <licenses>
@@ -45,53 +45,13 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>extjs</artifactId>
-            <version>6.2.0</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>codemirror</artifactId>
-            <version>5.33.0</version>
-            <optional>true</optional>
-        </dependency>
-    </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>javacc-maven-plugin</artifactId>
-                <version>2.6</version>
-                <executions>
-                    <execution>
-                        <id>javacc</id>
-                        <goals>
-                            <goal>javacc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.6.1</version>
-                <configuration>
-                    <compilerArgs>
-                        <arg>-parameters</arg>
-                    </compilerArgs>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    
+    <modules>
+        <module>pebbel-core</module>
+        <module>pebbel-web</module>
+        <module>pebbel-interpreter</module>
+        <module>pebbel-compiler</module>
+    </modules>
     <profiles>
         <profile>
             <id>ossrh</id>
