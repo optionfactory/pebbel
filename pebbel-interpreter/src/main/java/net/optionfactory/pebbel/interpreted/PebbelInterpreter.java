@@ -1,5 +1,8 @@
 package net.optionfactory.pebbel.interpreted;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.util.List;
 import net.optionfactory.pebbel.loading.FunctionsLoader;
 import net.optionfactory.pebbel.Loader;
@@ -13,16 +16,17 @@ import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 import net.optionfactory.pebbel.Verifier;
+import net.optionfactory.pebbel.loading.LoadingException;
 
 public class PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> {
 
     private final Parser parser;
     private final Verifier<VAR_METADATA_TYPE> verifier;
-    private final Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader;
-    private final Evaluator<VAR_TYPE, VAR_METADATA_TYPE> evaluator;
+    private final Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> loader;
+    private final Evaluator<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> evaluator;
     private final FunctionsLoader fl;
 
-    public PebbelInterpreter(Parser parser, Verifier<VAR_METADATA_TYPE> verifier, Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader, Evaluator<VAR_TYPE, VAR_METADATA_TYPE> evaluator, FunctionsLoader fl) {
+    public PebbelInterpreter(Parser parser, Verifier<VAR_METADATA_TYPE> verifier, Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> loader, Evaluator<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> evaluator, FunctionsLoader fl) {
         this.parser = parser;
         this.verifier = verifier;
         this.loader = loader;
@@ -30,9 +34,19 @@ public class PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYP
         this.fl = fl;
     }
 
-    public static <VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> defaults(Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader) {
-        return new PebbelInterpreter<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelEvaluator<>(), new PebbelFunctionsLoader(MethodHandleFunction::new));
+    public static <VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> defaults(Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> loader) {
+        return new PebbelInterpreter<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelEvaluator<>(), new PebbelFunctionsLoader<>(PebbelInterpreter::unreflect));
     }
+    
+    private static MethodHandle unreflect(Method m) {
+        try {
+            return MethodHandles.publicLookup().unreflect(m);
+        } catch (IllegalAccessException ex) {
+            throw new LoadingException(ex);
+        }
+
+    }    
+    
 
     public Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context) {
         return loader.descriptors(context, fl);
@@ -55,7 +69,7 @@ public class PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYP
     }
 
     public <T> Result<T> evaluate(EVALUATION_CONTEXT context, Expression expression, Class<T> expectedType) {
-        final Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols = loader.symbols(context, fl);
+        final Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols = loader.symbols(context, fl);
         return evaluator.evaluate(symbols, expression, expectedType);
     }
 

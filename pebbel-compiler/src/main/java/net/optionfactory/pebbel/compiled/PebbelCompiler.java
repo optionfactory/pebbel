@@ -1,5 +1,6 @@
 package net.optionfactory.pebbel.compiled;
 
+import java.lang.reflect.Method;
 import net.optionfactory.pebbel.Parser;
 import net.optionfactory.pebbel.Verifier;
 import net.optionfactory.pebbel.loading.*;
@@ -28,7 +29,7 @@ public class PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATIO
     public static <VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
     PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
     defaults(EarlyBindingLoader<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader) {
-        return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelFunctionsLoader(MethodHolderFunction::new));
+        return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelFunctionsLoader(m -> m));
     }
 
     public Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context) {
@@ -45,12 +46,12 @@ public class PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATIO
         if (!verificationProblems.isEmpty()) {
             return Result.errors(verificationProblems);
         }
-        final Bindings<String, Function, FunctionDescriptor> functionBindings = loader.functionBindings(compilationContext, fl);
+        final Bindings<String, Method, FunctionDescriptor> functionBindings = loader.functionBindings(compilationContext, fl);
         return new ExpressionCompiler<VAR_METADATA_TYPE>().compile(functionBindings, descriptors.variables, expressionResult.getValue(), expectedType);
     }
 
     public <T> Result<T> evaluate(EVALUATION_CONTEXT context, CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, T> expression, Class<T> expectedType) {
-        final Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols = loader.symbols(context, fl);
+        final Symbols<VAR_TYPE, VAR_METADATA_TYPE, Method> symbols = loader.symbols(context, fl);
         return Result.value(expression.evaluate(symbols.variables));
     }
 }

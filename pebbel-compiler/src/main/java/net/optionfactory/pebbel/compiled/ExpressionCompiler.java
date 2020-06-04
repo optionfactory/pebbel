@@ -18,13 +18,13 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
     public static byte[] lastGeneratedBytecode; // FIXME
 
     public static class Request<VAR_METADATA_TYPE> {
-        private final Bindings<String, Function, FunctionDescriptor> functions;
+        private final Bindings<String, Method, FunctionDescriptor> functions;
         private final Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors;
         private final ClassWriter classWriter = new ClassWriter((ClassWriter.COMPUTE_MAXS));
         private final MethodVisitor methodVisitor;
         private final String name;
 
-        private Request(Bindings<String, Function, FunctionDescriptor> functions, Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors) {
+        private Request(Bindings<String, Method, FunctionDescriptor> functions, Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors) {
             this.name = "Blob" + Double.valueOf(Math.random() * 1000).intValue(); // FIXME
             this.functions = functions;
             this.variableDescriptors = variableDescriptors;
@@ -45,7 +45,7 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     public <R, VAR_TYPE> Result<CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, R>> compile(
-            Bindings<String, Function, FunctionDescriptor> functionBindings,
+            Bindings<String, Method, FunctionDescriptor> functionBindings,
             Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors,
             Expression expression, Class<R> expectedType) {
         if (expectedType.isPrimitive()) {
@@ -127,7 +127,7 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
     @Override
     public Class<?> visit(FunctionCall node, Request<VAR_METADATA_TYPE> request) {
         final FunctionDescriptor descriptor = request.functions.descriptors().get(node.function);
-        final Method method = request.functions.values().get(node.function).method();
+        final Method method = request.functions.values().get(node.function);
         for (int i = 0; i < node.arguments.length; i++) {
             final Class<?> resultType = node.arguments[i].accept(this, request);
             typeAdapt(request.methodVisitor, resultType, descriptor.parameters[i].type);

@@ -1,5 +1,6 @@
 package net.optionfactory.pebbel.interpreted;
 
+import java.lang.invoke.MethodHandle;
 import java.util.Arrays;
 import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
 import net.optionfactory.pebbel.parsing.ast.Expression;
@@ -16,9 +17,9 @@ import net.optionfactory.pebbel.results.Result;
 /**
  * An AST visitor evaluating an expression.
  */
-public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Expression.Visitor<Object, Symbols<VAR_TYPE, VAR_METADATA_TYPE>> {
+public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Expression.Visitor<Object, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle>> {
 
-    public <R> Result<R> evaluate(Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols, Expression expression) {
+    public <R> Result<R> evaluate(Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols, Expression expression) {
         try {
             return Result.value((R) expression.accept(this, symbols));
         } catch (ExecutionException ex) {
@@ -27,50 +28,57 @@ public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Express
     }
 
     @Override
-    public Object visit(Expression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Object visit(Expression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return node.accept(this, symbols);
     }
 
     @Override
-    public Object visit(Variable node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Object visit(Variable node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return symbols.variables.value(node.name).orElse(null);
     }
 
     @Override
-    public String visit(StringLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public String visit(StringLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return node.literal;
     }
 
     @Override
-    public String visit(StringExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public String visit(StringExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return (String) node.accept(this, symbols);
     }
 
     @Override
-    public Boolean visit(BooleanExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Boolean visit(BooleanExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return (Boolean) node.accept(this, symbols);
     }
 
     @Override
-    public Double visit(NumberExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Double visit(NumberExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return (Double) node.accept(this, symbols);
     }
 
     @Override
-    public Double visit(NumberLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Double visit(NumberLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         return node.value;
     }
 
     @Override
-    public Object visit(FunctionCall node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Object visit(FunctionCall node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         final Object[] arguments = Arrays.stream(node.arguments)
                 .map(n -> n.accept(this, symbols))
                 .toArray();
-        return symbols.functions.value(node.function).get().perform(node.source, arguments);
+        final MethodHandle mh = symbols.functions.value(node.function).get();
+        try {
+            return mh.invokeWithArguments(arguments);
+        } catch (Throwable ex) {
+            throw new ExecutionException(ex.getMessage(), node.source, ex);
+        }
+
     }
 
+
     @Override
-    public Boolean visit(ShortCircuitExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE> symbols) {
+    public Boolean visit(ShortCircuitExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
         Boolean value = null;
         for (int i = 0; i != node.terms.length; ++i) {
             final BooleanExpression bexp = node.terms[i];

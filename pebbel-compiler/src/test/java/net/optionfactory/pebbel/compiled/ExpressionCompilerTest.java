@@ -2,7 +2,6 @@ package net.optionfactory.pebbel.compiled;
 
 import net.optionfactory.pebbel.loading.BindingHandler;
 import net.optionfactory.pebbel.loading.Bindings;
-import net.optionfactory.pebbel.loading.Function;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
 import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
@@ -20,8 +19,9 @@ import org.objectweb.asm.util.TraceClassVisitor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collections;
+import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.function.Function;
 
 
 public class ExpressionCompilerTest {
@@ -49,12 +49,12 @@ public class ExpressionCompilerTest {
         }
     }
 
-    private static Bindings<String, Function, FunctionDescriptor> FN_BINDINGS;
+    private static Bindings<String, Method, FunctionDescriptor> FN_BINDINGS;
     private static Map<String, VariableDescriptor<Object>> VAR_DESCRIPTORS;
 
     static {
-        final PebbelFunctionsLoader fl = new PebbelFunctionsLoader(MethodHolderFunction::new);
-        final Result<Bindings<String, Function, FunctionDescriptor>> load = fl.load(Functions.class);
+        final PebbelFunctionsLoader<Method> fl = new PebbelFunctionsLoader<>(Function.identity());
+        final Result<Bindings<String, Method, FunctionDescriptor>> load = fl.load(Functions.class);
         if (load.isError()) {
             throw new RuntimeException(load.getErrors().toString());
         }

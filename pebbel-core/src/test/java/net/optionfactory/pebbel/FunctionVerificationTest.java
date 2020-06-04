@@ -1,7 +1,9 @@
 package net.optionfactory.pebbel;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
-import net.optionfactory.pebbel.loading.Function;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,6 +17,7 @@ import net.optionfactory.pebbel.loading.BindingHandler;
 import net.optionfactory.pebbel.loading.Bindings;
 import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
+import net.optionfactory.pebbel.loading.LoadingException;
 import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.results.Problem;
@@ -49,9 +52,9 @@ public class FunctionVerificationTest {
 
     @Test
     public void canVerifyBuiltinWithObjectArrayVararg() {
-        final PebbelFunctionsLoader loader = new PebbelFunctionsLoader((method) -> null);
-        final Bindings<String, Function, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
-        final Symbols<Object, Object>  symbols = Symbols.of(loaded, NO_VARS);
+        final PebbelFunctionsLoader<MethodHandle> loader = new PebbelFunctionsLoader<>(this::unreflect);
+        final Bindings<String, MethodHandle, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
+        final Symbols<Object, Object, MethodHandle> symbols = Symbols.of(loaded, NO_VARS);
         final Expression[] arguments = new Expression[]{
             StringLiteral.of("1", Source.of(0, 0, 0, 0)),
             StringLiteral.of("2", Source.of(0, 0, 0, 0)),
@@ -64,9 +67,9 @@ public class FunctionVerificationTest {
 
     @Test
     public void canVerifyBuiltinWithObjectArrayVarargAndOtherArgs() {
-        final PebbelFunctionsLoader loader = new PebbelFunctionsLoader((method) -> null);
-        final Bindings<String, Function, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
-        final Symbols<Object, Object>  symbols = Symbols.of(loaded, NO_VARS);
+        final PebbelFunctionsLoader<MethodHandle> loader = new PebbelFunctionsLoader<>(this::unreflect);
+        final Bindings<String, MethodHandle, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
+        final Symbols<Object, Object, MethodHandle> symbols = Symbols.of(loaded, NO_VARS);
         final Expression[] arguments = new Expression[]{
             StringLiteral.of("prefix", Source.of(0, 0, 0, 0)),
             StringLiteral.of("1", Source.of(0, 0, 0, 0)),
@@ -80,9 +83,9 @@ public class FunctionVerificationTest {
 
     @Test
     public void canVerifyBuiltinWithStringArrayVarargAndOtherArgs() {
-        final PebbelFunctionsLoader loader = new PebbelFunctionsLoader((method) -> null);
-        final Bindings<String, Function, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
-        final Symbols<Object, Object>  symbols = Symbols.of(loaded, NO_VARS);
+        final PebbelFunctionsLoader<MethodHandle> loader = new PebbelFunctionsLoader<>(this::unreflect);
+        final Bindings<String, MethodHandle, FunctionDescriptor> loaded = loader.load(UnderTest.class).getValue();
+        final Symbols<Object, Object, MethodHandle> symbols = Symbols.of(loaded, NO_VARS);
         final Expression[] arguments = new Expression[]{
             StringLiteral.of("prefix", Source.of(0, 0, 0, 0)),
             StringLiteral.of("1", Source.of(0, 0, 0, 0)),
@@ -92,5 +95,14 @@ public class FunctionVerificationTest {
         final FunctionCall node = FunctionCall.of("vararg_str_array_with_other_args", arguments, Source.of(0, 0, 0, 0));
         final List<Problem> problems = new ExpressionVerifier<>().verify(Descriptors.from(symbols), node, String.class);
         Assert.assertEquals(Arrays.<Problem>asList(), problems);
+    }
+
+    private MethodHandle unreflect(Method m) {
+        try {
+            return MethodHandles.publicLookup().unreflect(m);
+        } catch (IllegalAccessException ex) {
+            throw new LoadingException(ex);
+        }
+
     }
 }

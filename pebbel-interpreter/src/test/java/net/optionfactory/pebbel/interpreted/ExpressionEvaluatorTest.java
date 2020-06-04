@@ -2,7 +2,6 @@ package net.optionfactory.pebbel.interpreted;
 
 import java.io.StringReader;
 import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
-import net.optionfactory.pebbel.interpreted.ExpressionEvaluator;
 import net.optionfactory.pebbel.parsing.JavaccParser;
 import net.optionfactory.pebbel.parsing.ParseException;
 import org.junit.Assert;
