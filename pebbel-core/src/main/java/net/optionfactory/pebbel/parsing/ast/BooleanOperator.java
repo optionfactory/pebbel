@@ -13,4 +13,8 @@ public enum BooleanOperator {
         }
         return this == BooleanOperator.OR ? lhs : !lhs;
     }
+
+    public boolean shortCircuitsOn() {
+        return this == BooleanOperator.OR;
+    }
 }
