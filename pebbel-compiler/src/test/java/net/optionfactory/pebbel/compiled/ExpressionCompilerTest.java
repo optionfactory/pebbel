@@ -8,6 +8,7 @@ import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.parsing.ast.*;
 import net.optionfactory.pebbel.results.Result;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -41,6 +42,11 @@ public class ExpressionCompilerTest {
         public static Object bar() {
             return "Bar";
         }
+
+        @BindingHandler("baz")
+        public static double baz(int i) {
+            return (double) i;
+        }
     }
 
     private static Bindings<String, Function, FunctionDescriptor> FN_BINDINGS;
@@ -70,8 +76,8 @@ public class ExpressionCompilerTest {
 
     @Test
     public void compileNumberLiteral() {
-        final NumberLiteral expression = NumberLiteral.of(123d, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final NumberLiteral expression = NumberLiteral.of(123d, null); // var expr = "123"
+        final Result<CompiledExpression<Object, Object, Double>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Double.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Double.valueOf(123d), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -80,7 +86,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileStringLiteral() {
         final StringLiteral expression = StringLiteral.of("Hello", null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals("Hello", result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -89,7 +95,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileVariableReference() {
         final Variable expression = Variable.of("INT", null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, Integer>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Integer.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Integer.valueOf(123), result.getValue().evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
         printGeneratedCode();
@@ -98,7 +104,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallNullary() {
         final FunctionCall expression = FunctionCall.of("foo", new Expression[0], null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.foo(), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -107,7 +113,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallUnary() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { StringLiteral.of("world", null)}, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.hello("world"), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -116,7 +122,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallUnaryChain() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("foo", new Expression[0], null)}, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.hello(Functions.foo()), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -125,7 +131,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallUnaryChainCast() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("bar", new Expression[0], null)}, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.hello((String) Functions.bar()), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -134,7 +140,7 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallUnaryVariableCast() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { Variable.of("STR", null) }, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.hello("variable"), result.getValue().evaluate(Bindings.singleton("STR", "variable", VAR_DESCRIPTORS.get("STR"))));
         printGeneratedCode();
@@ -144,9 +150,9 @@ public class ExpressionCompilerTest {
     public void compileShortCircuitExpressionOr() {
         final ShortCircuitExpression expression = ShortCircuitExpression.of(
                 new BooleanOperator[]{BooleanOperator.OR},
-                new BooleanExpression[]{Variable.of("STR", null), Variable.of("STR", null)},
+                new BooleanExpression[]{Variable.of("BOOL", null), Variable.of("BOOL", null)},
                 null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, Boolean>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Boolean.class);
         Assert.assertFalse(result.isError());
         printGeneratedCode();
     }
@@ -157,12 +163,33 @@ public class ExpressionCompilerTest {
                 new BooleanOperator[]{BooleanOperator.AND},
                 new BooleanExpression[]{Variable.of("BOOL", null), Variable.of("BOOL", null)},
                 null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        final Result<CompiledExpression<Object, Object, Boolean>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Boolean.class);
         Assert.assertFalse(result.isError());
         printGeneratedCode();
     }
 
-    private void printGeneratedCode() {
+    @Test
+    public void compileFunctionCallPrimitive() {
+        final FunctionCall expression = FunctionCall.of("baz", new Expression[] {
+                Variable.of("INT", null)
+        }, null);
+        final Result<CompiledExpression<Object, Object, Double>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Double.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals((Double) 123d, result.getValue().evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
+        printGeneratedCode();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rejectsPrimitiveReturnTypes() {
+        new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, NumberLiteral.of(123d, null), double.class);
+    }
+
+    @After
+    public void printGeneratedCode() {
+        if (ExpressionCompiler.lastGeneratedBytecode == null) {
+            System.out.println("No bytecode generated");
+            return;
+        }
         final ClassReader cr = new ClassReader(ExpressionCompiler.lastGeneratedBytecode);
         TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new Textifier(), new PrintWriter(System.out));
         cr.accept(traceClassVisitor, 0);

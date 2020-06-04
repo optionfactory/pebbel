@@ -1,5 +1,7 @@
 package net.optionfactory.pebbel.compiled;
 
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.optionfactory.pebbel.loading.*;
 import net.optionfactory.pebbel.parsing.ast.*;
 import net.optionfactory.pebbel.results.Problem;
@@ -45,10 +47,18 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
     public <R, VAR_TYPE> Result<CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, R>> compile(
             Bindings<String, Function, FunctionDescriptor> functionBindings,
             Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors,
-            Expression expression) {
+            Expression expression, Class<R> expectedType) {
+        if (expectedType.isPrimitive()) {
+            throw new IllegalArgumentException("expectedType must be a reference type");
+        }
         try {
             final Request<VAR_METADATA_TYPE> req = new Request<>(functionBindings, variableDescriptors);
-            expression.accept(this, req);
+            final Class<?> resultType = expression.accept(this, req);
+            Assigner.DEFAULT.assign(
+                    TypeDescription.ForLoadedType.of(resultType).asGenericType(),
+                    TypeDescription.ForLoadedType.of(expectedType).asGenericType(),
+                    Assigner.Typing.DYNAMIC)
+                    .apply(new MethodVisitorAdapter(req.methodVisitor), null);
             req.methodVisitor.visitInsn(ARETURN);
             req.methodVisitor.visitMaxs(0, 0);
             req.methodVisitor.visitEnd();
@@ -118,40 +128,67 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
     public Class<?> visit(FunctionCall node, Request<VAR_METADATA_TYPE> request) {
         final FunctionDescriptor descriptor = request.functions.descriptors().get(node.function);
         final Method method = request.functions.values().get(node.function).method();
-        final Type methodType = Type.getType(method);
-        final Type[] argumentTypes = methodType.getArgumentTypes();
-
         for (int i = 0; i < node.arguments.length; i++) {
             final Class<?> resultType = node.arguments[i].accept(this, request);
-            if (resultType != descriptor.parameters[i].type) {
-                request.methodVisitor.visitTypeInsn(CHECKCAST, argumentTypes[i].getInternalName());
-            }
+            typeAdapt(request.methodVisitor, resultType, descriptor.parameters[i].type);
         }
-
         request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(method.getDeclaringClass()).getInternalName(), method.getName(), Type.getType(method).getDescriptor(), false);
         return method.getReturnType();
     }
 
     @Override
     public Class<?> visit(ShortCircuitExpression node, Request<VAR_METADATA_TYPE> request) {
-        final Type booleanType = Type.getType(Boolean.class);
         final Label end = new Label();
         for (int i = 0; i < node.terms.length; i++) {
             final Class<?> resultType = node.terms[i].accept(this, request);
-            if (resultType != Boolean.class) {
-                request.methodVisitor.visitTypeInsn(CHECKCAST, booleanType.getInternalName());
-            }
+            typeAdapt(request.methodVisitor, resultType, Boolean.class);
             if (i < node.operators.length) {
                 request.methodVisitor.visitInsn(DUP);
-                request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
-                final BooleanOperator operator = node.operators[i];
+                typeAdapt(request.methodVisitor, Boolean.class, boolean.class);
                 request.methodVisitor.visitJumpInsn(node.operators[i].shortCircuitsOn() ? IFNE : IFEQ, end);
                 request.methodVisitor.visitInsn(POP);
             } else {
                 request.methodVisitor.visitLabel(end);
-                request.methodVisitor.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {"java/lang/Boolean"});
+                request.methodVisitor.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Boolean"});
             }
         }
         return Boolean.class;
+    }
+
+    private void typeAdapt(MethodVisitor mv, Class<?> srcType, Class<?> dstType) {
+        Assigner.DEFAULT.assign(
+                TypeDescription.ForLoadedType.of(srcType).asGenericType(),
+                TypeDescription.ForLoadedType.of(dstType).asGenericType(),
+                Assigner.Typing.DYNAMIC)
+                .apply(new MethodVisitorAdapter(mv), null);
+    }
+
+    public static class MethodVisitorAdapter extends net.bytebuddy.jar.asm.MethodVisitor {
+        private MethodVisitor delegate;
+
+        public MethodVisitorAdapter(MethodVisitor delegate) {
+            super(net.bytebuddy.jar.asm.Opcodes.ASM7);
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void visitInsn(int opcode) {
+            delegate.visitInsn(opcode);
+        }
+
+        @Override
+        public void visitIntInsn(int opcode, int operand) {
+            delegate.visitIntInsn(opcode, operand);
+        }
+
+        @Override
+        public void visitTypeInsn(int opcode, String type) {
+            delegate.visitTypeInsn(opcode, type);
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
+            delegate.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+        }
     }
 }

@@ -46,7 +46,7 @@ public class PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATIO
             return Result.errors(verificationProblems);
         }
         final Bindings<String, Function, FunctionDescriptor> functionBindings = loader.functionBindings(compilationContext, fl);
-        return new ExpressionCompiler<VAR_METADATA_TYPE>().compile(functionBindings, descriptors.variables, expressionResult.getValue());
+        return new ExpressionCompiler<VAR_METADATA_TYPE>().compile(functionBindings, descriptors.variables, expressionResult.getValue(), expectedType);
     }
 
     public <T> Result<T> evaluate(EVALUATION_CONTEXT context, CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, T> expression, Class<T> expectedType) {
