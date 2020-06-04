@@ -1,8 +1,10 @@
 package net.optionfactory.pebbel.compiled;
 
+import net.optionfactory.pebbel.loading.BindingHandler;
 import net.optionfactory.pebbel.loading.Bindings;
 import net.optionfactory.pebbel.loading.Function;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
+import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.parsing.ast.*;
 import net.optionfactory.pebbel.results.Result;
@@ -23,6 +25,41 @@ import java.util.Map;
 
 public class ExpressionCompilerTest {
 
+
+    public static class Functions {
+        @BindingHandler("foo")
+        public static String foo() {
+            return "Foo";
+        }
+
+        @BindingHandler("hello")
+        public static String hello(String what) {
+            return "Hello " + what;
+        }
+
+        @BindingHandler("bar")
+        public static Object bar() {
+            return "Bar";
+        }
+    }
+
+    private static Bindings<String, Function, FunctionDescriptor> FN_BINDINGS;
+    private static Map<String, VariableDescriptor<Object>> VAR_DESCRIPTORS;
+
+    static {
+        final PebbelFunctionsLoader fl = new PebbelFunctionsLoader(MethodHolderFunction::new);
+        final Result<Bindings<String, Function, FunctionDescriptor>> load = fl.load(Functions.class);
+        if (load.isError()) {
+            throw new RuntimeException(load.getErrors().toString());
+        }
+        FN_BINDINGS = load.getValue();
+        VAR_DESCRIPTORS = Map.of(
+                "STR", VariableDescriptor.of("VAR1", String.class, null),
+                "INT", VariableDescriptor.of("VAR1", Integer.class, null),
+                "BOOL", VariableDescriptor.of("VAR1", Boolean.class, null)
+        );
+    }
+
     @Ignore
     @Test
     public void explore() throws IOException {
@@ -33,9 +70,8 @@ public class ExpressionCompilerTest {
 
     @Test
     public void compileNumberLiteral() {
-        final NumberLiteral expression = new NumberLiteral();
-        expression.value = 123d;
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.empty(), Collections.emptyMap(), expression);
+        final NumberLiteral expression = NumberLiteral.of(123d, null);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Double.valueOf(123d), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -43,9 +79,8 @@ public class ExpressionCompilerTest {
 
     @Test
     public void compileStringLiteral() {
-        final StringLiteral expression = new StringLiteral();
-        expression.literal = "Hello";
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.empty(), Collections.emptyMap(), expression);
+        final StringLiteral expression = StringLiteral.of("Hello", null);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
         Assert.assertEquals("Hello", result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
@@ -53,108 +88,77 @@ public class ExpressionCompilerTest {
 
     @Test
     public void compileVariableReference() {
-        final Variable expression = Variable.of("VAR1", null);
-        final VariableDescriptor<Object> var1 = VariableDescriptor.of("VAR1", Integer.class, null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.empty(), Map.of("VAR1", var1), expression);
+        final Variable expression = Variable.of("INT", null);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Integer.valueOf(123), result.getValue().evaluate(Bindings.singleton("VAR1", 123, var1)));
+        Assert.assertEquals(Integer.valueOf(123), result.getValue().evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
         printGeneratedCode();
     }
 
-    public static String foo() {
-        return "Foo";
-    }
-
-    public static String hello(String what) {
-        return "Hello " + what;
-    }
-
-    public static Object bar() {
-        return "Bar";
-    }
-
     @Test
-    public void compileFunctionCallNullary() throws NoSuchMethodException {
+    public void compileFunctionCallNullary() {
         final FunctionCall expression = FunctionCall.of("foo", new Expression[0], null);
-        final MethodHolderFunction fun = new MethodHolderFunction(this.getClass().getMethod("foo"));
-        final FunctionDescriptor descriptor = FunctionDescriptor.of("foo", "", false, String.class);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.singleton("foo", fun, descriptor), Collections.emptyMap(), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Foo", result.getValue().evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.foo(), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
     }
 
     @Test
-    public void compileFunctionCallUnary() throws NoSuchMethodException {
+    public void compileFunctionCallUnary() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { StringLiteral.of("world", null)}, null);
-        final MethodHolderFunction fun = new MethodHolderFunction(this.getClass().getMethod("hello", String.class));
-        final FunctionDescriptor descriptor = FunctionDescriptor.of("hello", "", false, String.class, FunctionDescriptor.ParameterDescriptor.of(String.class, "what"));
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.singleton("hello", fun, descriptor), Collections.emptyMap(), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Hello world", result.getValue().evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.hello("world"), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
     }
 
     @Test
-    public void compileFunctionCallUnaryChain() throws NoSuchMethodException {
+    public void compileFunctionCallUnaryChain() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("foo", new Expression[0], null)}, null);
-        final MethodHolderFunction foo = new MethodHolderFunction(this.getClass().getMethod("foo"));
-        final MethodHolderFunction hello = new MethodHolderFunction(this.getClass().getMethod("hello", String.class));
-        final FunctionDescriptor fooDescriptor = FunctionDescriptor.of("foo", "", false, String.class);
-        final FunctionDescriptor helloDescriptor = FunctionDescriptor.of("hello", "", false, String.class, FunctionDescriptor.ParameterDescriptor.of(String.class, "what"));
-        final Bindings<String, Function, FunctionDescriptor> functionBindings = Bindings.<String, Function, FunctionDescriptor>singleton("hello", hello, helloDescriptor).overlaying(Bindings.singleton("foo", foo, fooDescriptor));
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(functionBindings, Collections.emptyMap(), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Hello Foo", result.getValue().evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.hello(Functions.foo()), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
     }
 
     @Test
-    public void compileFunctionCallUnaryChainCast() throws NoSuchMethodException {
+    public void compileFunctionCallUnaryChainCast() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("bar", new Expression[0], null)}, null);
-        final MethodHolderFunction bar = new MethodHolderFunction(this.getClass().getMethod("bar"));
-        final MethodHolderFunction hello = new MethodHolderFunction(this.getClass().getMethod("hello", String.class));
-        final FunctionDescriptor barDescriptor = FunctionDescriptor.of("bar", "", false, String.class);
-        final FunctionDescriptor helloDescriptor = FunctionDescriptor.of("hello", "", false, String.class, FunctionDescriptor.ParameterDescriptor.of(String.class, "what"));
-        final Bindings<String, Function, FunctionDescriptor> functionBindings = Bindings.<String, Function, FunctionDescriptor>singleton("hello", hello, helloDescriptor).overlaying(Bindings.singleton("bar", bar, barDescriptor));
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(functionBindings, Collections.emptyMap(), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Hello Bar", result.getValue().evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.hello((String) Functions.bar()), result.getValue().evaluate(Bindings.empty()));
         printGeneratedCode();
     }
 
     @Test
-    public void compileFunctionCallUnaryVariableCast() throws NoSuchMethodException {
-        final VariableDescriptor<Object> var1 = VariableDescriptor.of("VAR1", String.class, null);
-        final FunctionCall expression = FunctionCall.of("hello", new Expression[] { Variable.of("VAR1", null) }, null);
-        final MethodHolderFunction fun = new MethodHolderFunction(this.getClass().getMethod("hello", String.class));
-        final FunctionDescriptor descriptor = FunctionDescriptor.of("hello", "", false, String.class, FunctionDescriptor.ParameterDescriptor.of(String.class, "what"));
-
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.singleton("hello", fun, descriptor), Map.of("VAR1", var1), expression);
+    public void compileFunctionCallUnaryVariableCast() {
+        final FunctionCall expression = FunctionCall.of("hello", new Expression[] { Variable.of("STR", null) }, null);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Hello variable", result.getValue().evaluate(Bindings.singleton("VAR1", "variable", var1)));
+        Assert.assertEquals(Functions.hello("variable"), result.getValue().evaluate(Bindings.singleton("STR", "variable", VAR_DESCRIPTORS.get("STR"))));
         printGeneratedCode();
     }
 
     @Test
     public void compileShortCircuitExpressionOr() {
-        final VariableDescriptor<Object> var1 = VariableDescriptor.of("VAR1", Boolean.class, null);
         final ShortCircuitExpression expression = ShortCircuitExpression.of(
                 new BooleanOperator[]{BooleanOperator.OR},
-                new BooleanExpression[]{Variable.of("VAR1", null), Variable.of("VAR1", null)},
+                new BooleanExpression[]{Variable.of("STR", null), Variable.of("STR", null)},
                 null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.empty(), Map.of("VAR1", var1), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        Assert.assertFalse(result.isError());
         printGeneratedCode();
     }
 
     @Test
     public void compileShortCircuitExpressionAnd() {
-        final VariableDescriptor<Object> var1 = VariableDescriptor.of("VAR1", Boolean.class, null);
         final ShortCircuitExpression expression = ShortCircuitExpression.of(
                 new BooleanOperator[]{BooleanOperator.AND},
-                new BooleanExpression[]{Variable.of("VAR1", null), Variable.of("VAR1", null)},
+                new BooleanExpression[]{Variable.of("BOOL", null), Variable.of("BOOL", null)},
                 null);
-        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(Bindings.empty(), Map.of("VAR1", var1), expression);
+        final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression);
+        Assert.assertFalse(result.isError());
         printGeneratedCode();
     }
 
