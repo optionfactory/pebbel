@@ -8,9 +8,11 @@ public class ExecutionException extends LanguageException {
 
     private static final long serialVersionUID = 1L;
     public final Problem problem;
+    public final Source source;
 
     public ExecutionException(String reason, Source source, Throwable cause) {
         super("execution-exception:", String.format("execution problem: %s %s %s", reason, source, cause));
         this.problem = Problem.of("EXECUTION_EXCEPTION", reason, source, cause);
+        this.source = source;
     }
 }

@@ -47,6 +47,11 @@ public class ExpressionCompilerTest {
         public static double baz(int i) {
             return (double) i;
         }
+
+        @BindingHandler("boom")
+        public static Object boom() {
+            throw new IllegalStateException();
+        }
     }
 
     private static Bindings<String, Method, FunctionDescriptor> FN_BINDINGS;
@@ -187,6 +192,23 @@ public class ExpressionCompilerTest {
     @Test(expected = IllegalArgumentException.class)
     public void rejectsPrimitiveReturnTypes() {
         new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, NumberLiteral.of(123d, null), double.class);
+    }
+
+    @Test
+    public void wrapsExceptions() {
+        try {
+            final FunctionCall expression = FunctionCall.of("boom", new Expression[0], Source.of(1, 2, 3, 4));
+            final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Object.class);
+            Assert.assertFalse(result.isError());
+            result.getValue().evaluate(Bindings.empty());
+            Assert.fail("Should throw");
+        } catch (ExecutionException ex) {
+            final ExecutionException ee = (ExecutionException) ex;
+            Assert.assertEquals(1, ee.source.row);
+            Assert.assertEquals(2, ee.source.col);
+            Assert.assertEquals(3, ee.source.endRow);
+            Assert.assertEquals(4, ee.source.endCol);
+        }
     }
 
     @After

@@ -62,9 +62,15 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
             final Label tryStart = new Label();
             final Label tryEnd = new Label();
             request.methodVisitor.visitTryCatchBlock(tryStart, tryEnd, tryEnd, "java/lang/Throwable");
-            request.methodVisitor.visitInsn(ACONST_NULL);
-            request.methodVisitor.visitVarInsn(ASTORE, 2);
-            request.methodVisitor.visitFrame(Opcodes.F_FULL, 3, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", Opcodes.NULL}, 0, new Object[0]);
+            request.methodVisitor.visitIntInsn(SIPUSH, 0);
+            request.methodVisitor.visitInsn(DUP);
+            request.methodVisitor.visitInsn(DUP);
+            request.methodVisitor.visitInsn(DUP);
+            request.methodVisitor.visitVarInsn(ISTORE, 2);
+            request.methodVisitor.visitVarInsn(ISTORE, 3);
+            request.methodVisitor.visitVarInsn(ISTORE, 4);
+            request.methodVisitor.visitVarInsn(ISTORE, 5);
+            request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", INTEGER, INTEGER, INTEGER, INTEGER}, 0, new Object[0]);
             request.methodVisitor.visitLabel(tryStart);
 
 
@@ -77,18 +83,22 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
             request.methodVisitor.visitInsn(ARETURN);
 
             request.methodVisitor.visitLabel(tryEnd);
-            request.methodVisitor.visitFrame(Opcodes.F_FULL, 3, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", "net/optionfactory/pebbel/parsing/ast/Source"}, 1, new Object[] {"java/lang/Throwable"});
-            request.methodVisitor.visitVarInsn(ASTORE, 3);
+            request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", INTEGER, INTEGER, INTEGER, INTEGER}, 1, new Object[] {"java/lang/Throwable"});
+            request.methodVisitor.visitVarInsn(ASTORE, 6);
             request.methodVisitor.visitTypeInsn(NEW, "net/optionfactory/pebbel/compiled/ExecutionException");
             request.methodVisitor.visitInsn(DUP);
-            request.methodVisitor.visitVarInsn(ALOAD, 3);
+            request.methodVisitor.visitVarInsn(ALOAD, 6);
             request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", false);
-            request.methodVisitor.visitVarInsn(ALOAD, 2);
-            request.methodVisitor.visitVarInsn(ALOAD, 3);
+            request.methodVisitor.visitVarInsn(ILOAD, 2);
+            request.methodVisitor.visitVarInsn(ILOAD, 3);
+            request.methodVisitor.visitVarInsn(ILOAD, 4);
+            request.methodVisitor.visitVarInsn(ILOAD, 5);
+            request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(Source.class).getInternalName(), sourceOf.getName(), Type.getType(sourceOf).getDescriptor(), false);
+            request.methodVisitor.visitVarInsn(ALOAD, 6);
             request.methodVisitor.visitMethodInsn(INVOKESPECIAL, "net/optionfactory/pebbel/compiled/ExecutionException", "<init>", "(Ljava/lang/String;Lnet/optionfactory/pebbel/parsing/ast/Source;Ljava/lang/Throwable;)V", false);
             request.methodVisitor.visitInsn(ATHROW);
-            // TODO: visitVarNames
-            // REflection on types instead of strings
+            // TODO: visitVarNames + visitParameters
+            // TODO: Reflection on types instead of strings
             request.methodVisitor.visitMaxs(0, 0);
             request.methodVisitor.visitEnd();
             classWriter.visitEnd();
@@ -166,11 +176,15 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
         request.methodVisitor.visitLineNumber(node.source.row, lineNumber);
 
         request.methodVisitor.visitIntInsn(SIPUSH, node.source.row);
+        request.methodVisitor.visitVarInsn(ISTORE, 2);
         request.methodVisitor.visitIntInsn(SIPUSH, node.source.col);
+        request.methodVisitor.visitVarInsn(ISTORE, 3);
         request.methodVisitor.visitIntInsn(SIPUSH, node.source.endRow);
+        request.methodVisitor.visitVarInsn(ISTORE, 4);
         request.methodVisitor.visitIntInsn(SIPUSH, node.source.endCol);
-        request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(Source.class).getInternalName(), sourceOf.getName(), Type.getType(sourceOf).getDescriptor(), false);
-        request.methodVisitor.visitVarInsn(ASTORE, 2);
+        request.methodVisitor.visitVarInsn(ISTORE, 5);
+//        request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(Source.class).getInternalName(), sourceOf.getName(), Type.getType(sourceOf).getDescriptor(), false);
+//        request.methodVisitor.visitVarInsn(ASTORE, 2);
         request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(method.getDeclaringClass()).getInternalName(), method.getName(), Type.getType(method).getDescriptor(), false);
         return method.getReturnType();
     }
