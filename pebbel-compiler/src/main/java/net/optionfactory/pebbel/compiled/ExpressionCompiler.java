@@ -16,31 +16,23 @@ import java.util.Map;
 public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor<Class<?>, ExpressionCompiler.Request<VAR_METADATA_TYPE>> {
 
     public static byte[] lastGeneratedBytecode; // FIXME
+    private static final Method sourceOf;
+    static {
+        try {
+            sourceOf = Source.class.getMethod("of", int.class, int.class, int.class, int.class);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static class Request<VAR_METADATA_TYPE> {
         private final Bindings<String, Method, FunctionDescriptor> functions;
         private final Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors;
-        private final ClassWriter classWriter = new ClassWriter((ClassWriter.COMPUTE_MAXS));
-        private final MethodVisitor methodVisitor;
-        private final String name;
+        private MethodVisitor methodVisitor;
 
         private Request(Bindings<String, Method, FunctionDescriptor> functions, Map<String, VariableDescriptor<VAR_METADATA_TYPE>> variableDescriptors) {
-            this.name = "Blob" + Double.valueOf(Math.random() * 1000).intValue(); // FIXME
             this.functions = functions;
             this.variableDescriptors = variableDescriptors;
-
-            classWriter.visit(V11, ACC_PUBLIC | ACC_SUPER, name, null, "java/lang/Object", new String[]{"net/optionfactory/pebbel/compiled/CompiledExpression"});
-            final MethodVisitor constructorVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
-            constructorVisitor.visitCode();
-            constructorVisitor.visitVarInsn(ALOAD, 0);
-            constructorVisitor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
-            constructorVisitor.visitInsn(RETURN);
-            constructorVisitor.visitMaxs(1, 1);
-            constructorVisitor.visitEnd();
-
-            methodVisitor = classWriter.visitMethod(ACC_PUBLIC, "evaluate", "(Lnet/optionfactory/pebbel/loading/Bindings;)Ljava/lang/Object;", null, null);
-            methodVisitor.visitParameter("varBindings", 0);
-            methodVisitor.visitCode();
         }
     }
 
@@ -52,21 +44,58 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
             throw new IllegalArgumentException("expectedType must be a reference type");
         }
         try {
-            final Request<VAR_METADATA_TYPE> req = new Request<>(functionBindings, variableDescriptors);
-            final Class<?> resultType = expression.accept(this, req);
+            final String name = "Blob" + Double.valueOf(Math.random() * 1000).intValue(); // FIXME
+            final Request<VAR_METADATA_TYPE> request = new Request<>(functionBindings, variableDescriptors);
+            final ClassWriter classWriter = new ClassWriter((ClassWriter.COMPUTE_MAXS));
+            classWriter.visit(V11, ACC_PUBLIC | ACC_SUPER, name, null, "java/lang/Object", new String[]{"net/optionfactory/pebbel/compiled/CompiledExpression"});
+            final MethodVisitor constructorVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+            constructorVisitor.visitCode();
+            constructorVisitor.visitVarInsn(ALOAD, 0);
+            constructorVisitor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+            constructorVisitor.visitInsn(RETURN);
+            constructorVisitor.visitMaxs(1, 1);
+            constructorVisitor.visitEnd();
+
+            request.methodVisitor = classWriter.visitMethod(ACC_PUBLIC, "evaluate", "(Lnet/optionfactory/pebbel/loading/Bindings;)Ljava/lang/Object;", null, null);
+            request.methodVisitor.visitParameter("varBindings", 0);
+            request.methodVisitor.visitCode();
+            final Label tryStart = new Label();
+            final Label tryEnd = new Label();
+            request.methodVisitor.visitTryCatchBlock(tryStart, tryEnd, tryEnd, "java/lang/Throwable");
+            request.methodVisitor.visitInsn(ACONST_NULL);
+            request.methodVisitor.visitVarInsn(ASTORE, 2);
+            request.methodVisitor.visitFrame(Opcodes.F_FULL, 3, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", Opcodes.NULL}, 0, new Object[0]);
+            request.methodVisitor.visitLabel(tryStart);
+
+
+            final Class<?> resultType = expression.accept(this, request);
             Assigner.DEFAULT.assign(
                     TypeDescription.ForLoadedType.of(resultType).asGenericType(),
                     TypeDescription.ForLoadedType.of(expectedType).asGenericType(),
                     Assigner.Typing.DYNAMIC)
-                    .apply(new MethodVisitorAdapter(req.methodVisitor), null);
-            req.methodVisitor.visitInsn(ARETURN);
-            req.methodVisitor.visitMaxs(0, 0);
-            req.methodVisitor.visitEnd();
-            req.classWriter.visitEnd();
-            final byte[] bytecode = req.classWriter.toByteArray();
+                    .apply(new MethodVisitorAdapter(request.methodVisitor), null);
+            request.methodVisitor.visitInsn(ARETURN);
+
+            request.methodVisitor.visitLabel(tryEnd);
+            request.methodVisitor.visitFrame(Opcodes.F_FULL, 3, new Object[] {name, "net/optionfactory/pebbel/loading/Bindings", "net/optionfactory/pebbel/parsing/ast/Source"}, 1, new Object[] {"java/lang/Throwable"});
+            request.methodVisitor.visitVarInsn(ASTORE, 3);
+            request.methodVisitor.visitTypeInsn(NEW, "net/optionfactory/pebbel/compiled/ExecutionException");
+            request.methodVisitor.visitInsn(DUP);
+            request.methodVisitor.visitVarInsn(ALOAD, 3);
+            request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", false);
+            request.methodVisitor.visitVarInsn(ALOAD, 2);
+            request.methodVisitor.visitVarInsn(ALOAD, 3);
+            request.methodVisitor.visitMethodInsn(INVOKESPECIAL, "net/optionfactory/pebbel/compiled/ExecutionException", "<init>", "(Ljava/lang/String;Lnet/optionfactory/pebbel/parsing/ast/Source;Ljava/lang/Throwable;)V", false);
+            request.methodVisitor.visitInsn(ATHROW);
+            // TODO: visitVarNames
+            // REflection on types instead of strings
+            request.methodVisitor.visitMaxs(0, 0);
+            request.methodVisitor.visitEnd();
+            classWriter.visitEnd();
+            final byte[] bytecode = classWriter.toByteArray();
             lastGeneratedBytecode = bytecode;
             final DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(); // One classloader per
-            final Class<CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, R>> clazz = dynamicClassLoader.defineClass(req.name, bytecode);
+            final Class<CompiledExpression<VAR_TYPE, VAR_METADATA_TYPE, R>> clazz = dynamicClassLoader.defineClass(name, bytecode);
             return Result.value(clazz.getConstructor().newInstance());
 
         } catch (Exception ex) {
@@ -132,6 +161,16 @@ public class ExpressionCompiler<VAR_METADATA_TYPE> implements Expression.Visitor
             final Class<?> resultType = node.arguments[i].accept(this, request);
             typeAdapt(request.methodVisitor, resultType, descriptor.parameters[i].type);
         }
+        final Label lineNumber = new Label();
+        request.methodVisitor.visitLabel(lineNumber);
+        request.methodVisitor.visitLineNumber(node.source.row, lineNumber);
+
+        request.methodVisitor.visitIntInsn(SIPUSH, node.source.row);
+        request.methodVisitor.visitIntInsn(SIPUSH, node.source.col);
+        request.methodVisitor.visitIntInsn(SIPUSH, node.source.endRow);
+        request.methodVisitor.visitIntInsn(SIPUSH, node.source.endCol);
+        request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(Source.class).getInternalName(), sourceOf.getName(), Type.getType(sourceOf).getDescriptor(), false);
+        request.methodVisitor.visitVarInsn(ASTORE, 2);
         request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(method.getDeclaringClass()).getInternalName(), method.getName(), Type.getType(method).getDescriptor(), false);
         return method.getReturnType();
     }
