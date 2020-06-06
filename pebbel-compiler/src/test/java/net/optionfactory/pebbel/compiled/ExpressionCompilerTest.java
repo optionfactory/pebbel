@@ -11,6 +11,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.ASMifier;
 import org.objectweb.asm.util.Textifier;
@@ -19,13 +21,31 @@ import org.objectweb.asm.util.TraceClassVisitor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
-
+@RunWith(Parameterized.class)
 public class ExpressionCompilerTest {
 
+    private boolean includeDebugInfo;
+    private boolean remapExceptions;
+
+    public ExpressionCompilerTest(boolean includeDebugInfo, boolean remapExceptions) {
+        this.includeDebugInfo = includeDebugInfo;
+        this.remapExceptions = remapExceptions;
+    }
+
+    @Parameterized.Parameters(name = "includeDebugInfo: {0} remapExceptions: {1}")
+    public static Collection<Object[]> data() {
+        final List<Object[]> objects = new ArrayList<>();
+        objects.add(new Object[]{ true, true });
+        objects.add(new Object[]{ true, false });
+        objects.add(new Object[]{ false, true });
+        objects.add(new Object[]{ false, false });
+        return objects;
+    }
 
     public static class Functions {
         @BindingHandler("foo")
@@ -71,8 +91,7 @@ public class ExpressionCompilerTest {
         );
     }
 
-    @Ignore
-    @Test
+//    @Test
     public void explore() throws IOException {
         final ClassReader cr = new ClassReader(new FileInputStream("/home/fdegrassi/projects/pebbel2/pebbel-compiler/target/test-classes/net/optionfactory/pebbel/compiled/Asd.class"));
         TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new ASMifier(), new PrintWriter(System.out));
@@ -87,73 +106,65 @@ public class ExpressionCompilerTest {
     @Test
     public void compileNumberLiteral() {
         final NumberLiteral expression = NumberLiteral.of(123d, DUMMY_SOURCE); // var expr = "123"
-        final Result<CompiledExpression<Object, Object, Double>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Double.class);
+        final Result<CompiledExpression.Unloaded<Double>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Double.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Double.valueOf(123d), result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals(Double.valueOf(123d), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileStringLiteral() {
         final StringLiteral expression = StringLiteral.of("Hello", DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals("Hello", result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals("Hello", loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileVariableReference() {
         final Variable expression = Variable.of("INT", DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, Integer>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Integer.class);
+        final Result<CompiledExpression.Unloaded<Integer>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Integer.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Integer.valueOf(123), result.getValue().evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
-        printGeneratedCode();
+        Assert.assertEquals(Integer.valueOf(123), loadAndInstantiate(result.getValue()).evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
     }
 
     @Test
     public void compileFunctionCallNullary() {
         final FunctionCall expression = FunctionCall.of("foo", new Expression[0], DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.foo(), result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals(Functions.foo(), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileFunctionCallUnary() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { StringLiteral.of("world", DUMMY_SOURCE)}, DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello("world"), result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileFunctionCallUnaryChain() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("foo", new Expression[0], DUMMY_SOURCE)}, DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello(Functions.foo()), result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals(Functions.hello(Functions.foo()), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileFunctionCallUnaryChainCast() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { FunctionCall.of("bar", new Expression[0], DUMMY_SOURCE)}, DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello((String) Functions.bar()), result.getValue().evaluate(Bindings.empty()));
-        printGeneratedCode();
+        Assert.assertEquals(Functions.hello((String) Functions.bar()), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
     public void compileFunctionCallUnaryVariableCast() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { Variable.of("STR", DUMMY_SOURCE) }, DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, String>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, String.class);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello("variable"), result.getValue().evaluate(Bindings.singleton("STR", "variable", VAR_DESCRIPTORS.get("STR"))));
-        printGeneratedCode();
+        Assert.assertEquals(Functions.hello("variable"), loadAndInstantiate(result.getValue()).evaluate(Bindings.singleton("STR", "variable", VAR_DESCRIPTORS.get("STR"))));
     }
 
     @Test
@@ -162,9 +173,8 @@ public class ExpressionCompilerTest {
                 new BooleanOperator[]{BooleanOperator.OR},
                 new BooleanExpression[]{Variable.of("BOOL", DUMMY_SOURCE), Variable.of("BOOL", DUMMY_SOURCE)},
                 DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, Boolean>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Boolean.class);
+        final Result<CompiledExpression.Unloaded<Boolean>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Boolean.class);
         Assert.assertFalse(result.isError());
-        printGeneratedCode();
     }
 
     @Test
@@ -173,9 +183,8 @@ public class ExpressionCompilerTest {
                 new BooleanOperator[]{BooleanOperator.AND},
                 new BooleanExpression[]{Variable.of("BOOL", DUMMY_SOURCE), Variable.of("BOOL", DUMMY_SOURCE)},
                 DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, Boolean>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Boolean.class);
+        final Result<CompiledExpression.Unloaded<Boolean>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Boolean.class);
         Assert.assertFalse(result.isError());
-        printGeneratedCode();
     }
 
     @Test
@@ -183,47 +192,77 @@ public class ExpressionCompilerTest {
         final FunctionCall expression = FunctionCall.of("baz", new Expression[] {
                 Variable.of("INT", DUMMY_SOURCE)
         }, DUMMY_SOURCE);
-        final Result<CompiledExpression<Object, Object, Double>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Double.class);
+        final Result<CompiledExpression.Unloaded<Double>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Double.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals((Double) 123d, result.getValue().evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
-        printGeneratedCode();
+        Assert.assertEquals((Double) 123d, loadAndInstantiate(result.getValue()).evaluate(Bindings.singleton("INT", 123, VAR_DESCRIPTORS.get("INT"))));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void rejectsPrimitiveReturnTypes() {
-        new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, NumberLiteral.of(123d, null), double.class);
+        new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, NumberLiteral.of(123d, null), double.class);
     }
 
     @Test
     public void wrapsExceptions() {
         try {
             final FunctionCall expression = FunctionCall.of("boom", new Expression[0], Source.of(1, 2, 3, 4));
-            final Result<CompiledExpression<Object, Object, Object>> result = new ExpressionCompiler<>().compile(FN_BINDINGS, VAR_DESCRIPTORS, expression, Object.class);
+            final Result<CompiledExpression.Unloaded<Object>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, Object.class);
             Assert.assertFalse(result.isError());
-            result.getValue().evaluate(Bindings.empty());
+            loadAndInstantiate(result.getValue()).evaluate(Bindings.empty());
             Assert.fail("Should throw");
         } catch (ExecutionException ex) {
+            if (!remapExceptions) {
+                Assert.fail("Unexpected ExecutionException with remapExceptions disabled");
+            }
             final ExecutionException ee = (ExecutionException) ex;
             Assert.assertEquals(1, ee.source.row);
             Assert.assertEquals(2, ee.source.col);
             Assert.assertEquals(3, ee.source.endRow);
             Assert.assertEquals(4, ee.source.endCol);
+        } catch (Exception ex) {
+            if (remapExceptions) {
+                Assert.fail("Should have thrown an ExecutionException with remapExceptions enabled");
+            }
         }
     }
 
-    @After
-    public void printGeneratedCode() {
-        if (ExpressionCompiler.lastGeneratedBytecode == null) {
-            System.out.println("No bytecode generated");
-            return;
+    @Test
+    public void wrapsExceptionsOnVarFetch() {
+        try {
+            final Variable expression = Variable.of("STR", Source.of(1,2,3,4));
+            final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+            Assert.assertFalse(result.isError());
+            loadAndInstantiate(result.getValue()).evaluate(Bindings.singleton("STR", 1234, VAR_DESCRIPTORS.get("STR")));
+            Assert.fail("Should throw");
+        } catch (ExecutionException ex) {
+            if (!remapExceptions) {
+                Assert.fail("Unexpected ExecutionException with remapExceptions disabled");
+            }
+            final ExecutionException ee = (ExecutionException) ex;
+            Assert.assertEquals(1, ee.source.row);
+            Assert.assertEquals(2, ee.source.col);
+            Assert.assertEquals(3, ee.source.endRow);
+            Assert.assertEquals(4, ee.source.endCol);
+        } catch (Exception ex) {
+            if (remapExceptions) {
+                Assert.fail("Should have thrown an ExecutionException with remapExceptions enabled");
+            }
         }
+    }
+
+    private static <R> CompiledExpression<R> loadAndInstantiate(CompiledExpression.Unloaded<R> unloaded) {
+        printGeneratedCode(unloaded.bytecode);
+        return new DynamicLoader().load(unloaded);
+    }
+    
+    private static void printGeneratedCode(byte[] bytecode) {
         {
-            final ClassReader cr = new ClassReader(ExpressionCompiler.lastGeneratedBytecode);
+            final ClassReader cr = new ClassReader(bytecode);
             TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new Textifier(), new PrintWriter(System.out));
             cr.accept(traceClassVisitor, 0);
         }
         {
-            final ClassReader cr = new ClassReader(ExpressionCompiler.lastGeneratedBytecode);
+            final ClassReader cr = new ClassReader(bytecode);
             TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new ASMifier(), new PrintWriter(System.out));
             cr.accept(traceClassVisitor, 0);
         }
