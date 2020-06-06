@@ -22,6 +22,12 @@
             <organization>OptionFactory</organization>
             <organizationUrl>http://optionfactory.net</organizationUrl>
         </developer>
+        <developer>
+            <name>Francesco Degrassi</name>
+            <email>francesco.degrassi@optionfactory.net</email>
+            <organization>OptionFactory</organization>
+            <organizationUrl>http://optionfactory.net</organizationUrl>
+        </developer>
     </developers>
     <scm>
         <connection>scm:git:https://github.com/optionfactory/pebbel.git</connection>
