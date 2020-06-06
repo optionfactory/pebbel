@@ -256,6 +256,9 @@ public class ExpressionCompilerTest {
     }
     
     private static void printGeneratedCode(byte[] bytecode) {
+        if (true) {
+            return;
+        }
         {
             final ClassReader cr = new ClassReader(bytecode);
             TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new Textifier(), new PrintWriter(System.out));
