@@ -7,6 +7,6 @@ import net.optionfactory.pebbel.results.Problem;
 
 public interface Verifier<VAR_METADATA_TYPE> {
 
-    List<Problem> verify(Descriptors<VAR_METADATA_TYPE> descriptors, Expression expression, Class<?> expected);
+    List<Problem> verify(Descriptors<VAR_METADATA_TYPE,?> descriptors, Expression expression, Class<?> expected);
 
 }

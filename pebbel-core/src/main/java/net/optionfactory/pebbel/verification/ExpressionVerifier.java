@@ -27,11 +27,11 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
 
     public static class Request<VAR_METADATA_TYPE> {
 
-        public Descriptors<VAR_METADATA_TYPE> descriptors;
+        public Descriptors<VAR_METADATA_TYPE, ?> descriptors;
         public Class<?> expected;
         public List<Problem> problems;
 
-        public static <VAR_METADATA_TYPE> Request<VAR_METADATA_TYPE> of(Descriptors<VAR_METADATA_TYPE> descriptors, Class<?> expected, List<Problem> problems) {
+        public static <VAR_METADATA_TYPE> Request<VAR_METADATA_TYPE> of(Descriptors<VAR_METADATA_TYPE, ?> descriptors, Class<?> expected, List<Problem> problems) {
             final Request<VAR_METADATA_TYPE> request = new Request<>();
             request.problems = problems;
             request.expected = expected;
@@ -40,7 +40,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
         }
     }
 
-    public List<Problem> verify(Descriptors<VAR_METADATA_TYPE> descriptors, Expression expression, Class<?> expected) {
+    public List<Problem> verify(Descriptors<VAR_METADATA_TYPE, ?> descriptors, Expression expression, Class<?> expected) {
         final List<Problem> problems = new ArrayList<>();
         final Class<?> got = expression.accept(this, Request.of(descriptors, expected, problems));
         if (!TypeChecks.isAssignable(expected, got)) {
@@ -106,11 +106,11 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
         for (int i = 0; i != node.arguments.length; ++i) {
             argumentTypes[i] = node.arguments[i].accept(this, request);
         }
-        if (!request.descriptors.functions.containsKey(node.function)) {
+        if (!request.descriptors.functions.descriptor(node.function).isPresent()) {
             request.problems.add(UNKNOWN_SYMBOL(node.source, node.function));
             return UnknownType.class;
         }
-        final FunctionDescriptor descriptor = request.descriptors.functions.get(node.function);
+        final FunctionDescriptor descriptor = request.descriptors.functions.descriptor(node.function).get();
         final boolean arityMatches = !descriptor.vararg ? descriptor.arity == argumentTypes.length : argumentTypes.length >= descriptor.arity - 1;
         if (!arityMatches) {
             request.problems.add(ARITY_MISMATCH(node.source, node.function, descriptor.arity, argumentTypes.length));

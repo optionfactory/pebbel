@@ -42,7 +42,7 @@ public class BindingsMother {
     private static final Bindings<String, Object, VariableDescriptor<Object>> VARS = Bindings.root(VARIABLE_VALUES, VARIABLE_DESCRIPTORS);
 
     public static final Symbols<Object, Object, MethodHandle> SYMBOLS = Symbols.of(FUNCTIONS, VARS);
-    public static final Descriptors<Object> DESCRIPTORS = Descriptors.from(SYMBOLS);
+    public static final Descriptors<Object, MethodHandle> DESCRIPTORS = Descriptors.from(SYMBOLS);
 
     public static Boolean makeTrue() {
         return true;

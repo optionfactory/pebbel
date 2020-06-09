@@ -1,6 +1,8 @@
 package net.optionfactory.pebbel.compiled;
 
 import java.lang.reflect.Method;
+
+import net.optionfactory.pebbel.Loader;
 import net.optionfactory.pebbel.Parser;
 import net.optionfactory.pebbel.Verifier;
 import net.optionfactory.pebbel.loading.*;
@@ -12,42 +14,53 @@ import net.optionfactory.pebbel.verification.PebbelVerifier;
 
 import java.util.List;
 
-public class PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> {
+public class PebbelCompiler<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> {
 
     private final Parser parser;
     private final Verifier<VAR_METADATA_TYPE> verifier;
-    private final EarlyBindingLoader<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader;
+    private final Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, Method> loader;
     private final FunctionsLoader<Method> fl;
 
-    public PebbelCompiler(Parser parser, Verifier<VAR_METADATA_TYPE> verifier, EarlyBindingLoader<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader, FunctionsLoader<Method> fl) {
+    public PebbelCompiler(Parser parser, Verifier<VAR_METADATA_TYPE> verifier, Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, Method> loader, FunctionsLoader<Method> fl) {
         this.parser = parser;
         this.verifier = verifier;
         this.loader = loader;
         this.fl = fl;
     }
 
-    public static <VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
-    PebbelCompiler<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
-    defaults(EarlyBindingLoader<VERIFICATION_CONTEXT, COMPILATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE> loader) {
+    public static <VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
+    PebbelCompiler<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE>
+    defaults(Loader<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYPE, VAR_METADATA_TYPE, Method> loader) {
         return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelFunctionsLoader<>(m -> m));
     }
 
-    public Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context) {
+    public Descriptors<VAR_METADATA_TYPE, Method> descriptors(VERIFICATION_CONTEXT context) { // TODO: expose descriptors() and symbols() so they can be passed as params to verify / ocmpile / evaluate
         return loader.descriptors(context, fl);
     }
 
-    public <R> Result<CompiledExpression.Unloaded<R>> compile(VERIFICATION_CONTEXT context, COMPILATION_CONTEXT compilationContext, String expression, Class<R> expectedType) { // TODO pass classloader
+    public <R> Result<Expression> parse(VERIFICATION_CONTEXT context, String expression, VerificationMode mode, Class<R> expectedType) {
         final Result<Expression> expressionResult = parser.parse(expression, expectedType);
         if (expressionResult.isError()) {
             return expressionResult.mapErrors();
         }
-        final Descriptors<VAR_METADATA_TYPE> descriptors = loader.descriptors(context, fl);
+        if (mode == VerificationMode.SKIP) {
+            return expressionResult;
+        }
+        final Descriptors<VAR_METADATA_TYPE, Method> descriptors = loader.descriptors(context, fl);
         final List<Problem> verificationProblems = verifier.verify(descriptors, expressionResult.getValue(), expectedType);
         if (!verificationProblems.isEmpty()) {
             return Result.errors(verificationProblems);
         }
-        final Bindings<String, Method, FunctionDescriptor> functionBindings = loader.functionBindings(compilationContext, fl);
-        return new ExpressionCompiler().compile(functionBindings, expressionResult.getValue(), expectedType);
+        return expressionResult;
+    }
+
+    public enum VerificationMode {
+        VERIFY, SKIP;
+    }
+
+    public <R> Result<CompiledExpression.Unloaded<R>> compile(VERIFICATION_CONTEXT context, Expression expression, Class<R> expectedType) {
+        final Descriptors<VAR_METADATA_TYPE, Method> descriptors = loader.descriptors(context, fl);
+        return new ExpressionCompiler().compile(descriptors.functions, expression, expectedType);
     }
 
     public <T> Result<T> evaluate(EVALUATION_CONTEXT context, CompiledExpression<T> expression, Class<T> expectedType) {

@@ -48,7 +48,7 @@ public class PebbelInterpreter<VERIFICATION_CONTEXT, EVALUATION_CONTEXT, VAR_TYP
     }    
     
 
-    public Descriptors<VAR_METADATA_TYPE> descriptors(VERIFICATION_CONTEXT context) {
+    public Descriptors<VAR_METADATA_TYPE, MethodHandle> descriptors(VERIFICATION_CONTEXT context) {
         return loader.descriptors(context, fl);
     }
 

@@ -1,1 +1,4 @@
 target/
+*.iml
+.idea
+stale_outputs_checked
