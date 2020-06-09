@@ -204,8 +204,17 @@ public class ExpressionCompiler
         final Method method = request.functions.values().get(node.function);
         for (int i = 0; i < node.arguments.length; i++) {
             final Class<?> resultType = node.arguments[i].accept(this, request);
-            typeAdapt(request.methodVisitor, resultType, descriptor.parameters[i].type);
+            final Class<?> type;
+            if (i >= descriptor.parameters.length && descriptor.vararg) {
+                type = descriptor.parameters[descriptor.parameters.length - 1].type;
+            } else {
+                type = descriptor.parameters[i].type;
+            }
+            // if vararg and i == lastIndexNonVararg: crea array del tipo giusto
+            // if vararg and i >= lastIndexNonVararg: ?astore
+            typeAdapt(request.methodVisitor, resultType, type);
         }
+
         final Label lineNumber = new Label();
         request.methodVisitor.visitLabel(lineNumber);
         request.methodVisitor.visitLineNumber(node.source.row, lineNumber);

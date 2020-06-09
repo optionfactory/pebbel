@@ -72,6 +72,11 @@ public class ExpressionCompilerTest {
         public static Object boom() {
             throw new IllegalStateException();
         }
+
+        @BindingHandler("vararg")
+        public static String vararg(String first, String... others) {
+            return first;
+        }
     }
 
     private static Bindings<String, Method, FunctionDescriptor> FN_BINDINGS;
@@ -138,6 +143,40 @@ public class ExpressionCompilerTest {
     @Test
     public void compileFunctionCallUnary() {
         final FunctionCall expression = FunctionCall.of("hello", new Expression[] { StringLiteral.of("world", DUMMY_SOURCE)}, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+    }
+
+
+    @Test
+    public void compileFunctionCallVarargWithOneValue() {
+        final FunctionCall expression = FunctionCall.of("vararg", new Expression[] {
+                StringLiteral.of("hello", DUMMY_SOURCE),
+                StringLiteral.of("world", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+    }
+
+    @Test
+    public void compileFunctionCallVarargWithManyValues() {
+        final FunctionCall expression = FunctionCall.of("vararg", new Expression[] {
+                StringLiteral.of("hello", DUMMY_SOURCE),
+                StringLiteral.of("sad", DUMMY_SOURCE),
+                StringLiteral.of("world", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+    }
+
+    @Test
+    public void compileFunctionCallVarargWithNoValues() {
+        final FunctionCall expression = FunctionCall.of("vararg", new Expression[] {
+                StringLiteral.of("hello", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
         final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
         Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
