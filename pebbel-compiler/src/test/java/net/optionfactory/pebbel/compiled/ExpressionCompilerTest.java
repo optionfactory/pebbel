@@ -7,9 +7,7 @@ import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.parsing.ast.*;
 import net.optionfactory.pebbel.results.Result;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -21,10 +19,12 @@ import org.objectweb.asm.util.TraceClassVisitor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
 public class ExpressionCompilerTest {
@@ -73,10 +73,25 @@ public class ExpressionCompilerTest {
             throw new IllegalStateException();
         }
 
+        @BindingHandler("varargOnly")
+        public static String varargOnly(String... others) {
+            return Stream.of(others).collect(Collectors.toList()).toString();
+        }
         @BindingHandler("vararg")
         public static String vararg(String first, String... others) {
-            return first;
+            return Stream.concat(Stream.of(first), Stream.of(others)).collect(Collectors.toList()).toString();
         }
+
+        @BindingHandler("varargNumber")
+        public static String varargNumber(Number first, Number... others) {
+            return Stream.concat(Stream.of(first), Stream.of(others)).map(e -> e.toString()).collect(Collectors.toList()).toString();
+        }
+
+        @BindingHandler("varargPrimitives")
+        public static String varargPrimitives(int first, int... others) {
+            return IntStream.concat(IntStream.of(first), IntStream.of(others)).mapToObj(Integer::toString).collect(Collectors.toList()).toString();
+        }
+
     }
 
     private static Bindings<String, Method, FunctionDescriptor> FN_BINDINGS;
@@ -90,13 +105,14 @@ public class ExpressionCompilerTest {
         }
         FN_BINDINGS = load.getValue();
         VAR_DESCRIPTORS = Map.of(
-                "STR", VariableDescriptor.of("VAR1", String.class, null),
-                "INT", VariableDescriptor.of("VAR1", Integer.class, null),
-                "BOOL", VariableDescriptor.of("VAR1", Boolean.class, null)
+                "STR", VariableDescriptor.of("STR", String.class, null),
+                "INT", VariableDescriptor.of("INT", Integer.class, null),
+                "BOOL", VariableDescriptor.of("BOOL", Boolean.class, null),
+                "LONG", VariableDescriptor.of("LONG", Long.class, null)
         );
     }
 
-//    @Test
+    @Test
     public void explore() throws IOException {
         final ClassReader cr = new ClassReader(new FileInputStream("/home/fdegrassi/projects/pebbel2/pebbel-compiler/target/test-classes/net/optionfactory/pebbel/compiled/Asd.class"));
         TraceClassVisitor traceClassVisitor = new TraceClassVisitor(null, new ASMifier(), new PrintWriter(System.out));
@@ -157,7 +173,7 @@ public class ExpressionCompilerTest {
         }, DUMMY_SOURCE);
         final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.vararg("hello", "world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
@@ -169,7 +185,7 @@ public class ExpressionCompilerTest {
         }, DUMMY_SOURCE);
         final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.vararg("hello", "sad", "world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
 
     @Test
@@ -179,8 +195,67 @@ public class ExpressionCompilerTest {
         }, DUMMY_SOURCE);
         final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
         Assert.assertFalse(result.isError());
-        Assert.assertEquals(Functions.hello("world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+        Assert.assertEquals(Functions.vararg("hello"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
     }
+
+    @Test
+    public void compileFunctionCallVarargOnly() {
+        final FunctionCall expression = FunctionCall.of("varargOnly", new Expression[] {
+                StringLiteral.of("hello", DUMMY_SOURCE),
+                StringLiteral.of("world", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.varargOnly("hello", "world"), loadAndInstantiate(result.getValue()).evaluate(Bindings.empty()));
+    }
+
+
+    @Test
+    public void compileFunctionCallVarargWithSubtypes() {
+        final FunctionCall expression = FunctionCall.of("varargNumber", new Expression[] {
+                Variable.of("INT", DUMMY_SOURCE),
+                Variable.of("LONG", DUMMY_SOURCE),
+                Variable.of("INT", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.varargNumber(1,2l,1), loadAndInstantiate(result.getValue()).evaluate(Bindings.root(Map.of("INT", 1, "LONG", 2l), VAR_DESCRIPTORS)));
+    }
+
+    @Test
+    public void compileFunctionCallVarargWithPrimitives() {
+        final FunctionCall expression = FunctionCall.of("varargNumber", new Expression[] {
+                Variable.of("INT", DUMMY_SOURCE),
+                Variable.of("INT", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.varargPrimitives(1,1), loadAndInstantiate(result.getValue()).evaluate(Bindings.root(Map.of("INT", 1), VAR_DESCRIPTORS)));
+    }
+
+    @Test
+    public void compileFunctionCallVarargWithPrimitivesConversion() {
+        final FunctionCall expression = FunctionCall.of("varargNumber", new Expression[] {
+                Variable.of("LONG", DUMMY_SOURCE),
+                Variable.of("LONG", DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals(Functions.varargPrimitives(1,1), loadAndInstantiate(result.getValue()).evaluate(Bindings.root(Map.of("LONG", 1), VAR_DESCRIPTORS)));
+    }
+
+    @Test
+    public void compileFunctionCallVarargConversion() {
+        final FunctionCall expression = FunctionCall.of("vararg", new Expression[] {
+                FunctionCall.of("foo", new Expression[0], DUMMY_SOURCE),
+                FunctionCall.of("bar", new Expression[0], DUMMY_SOURCE),
+                FunctionCall.of("bar", new Expression[0], DUMMY_SOURCE)
+        }, DUMMY_SOURCE);
+        final Result<CompiledExpression.Unloaded<String>> result = new ExpressionCompiler(includeDebugInfo, remapExceptions).compile(FN_BINDINGS, expression, String.class);
+        Assert.assertFalse(result.isError());
+        Assert.assertEquals("[Foo, Bar, Bar]", loadAndInstantiate(result.getValue()).evaluate(Bindings.root(Map.of("LONG", 1), VAR_DESCRIPTORS)));
+    }
+
 
     @Test
     public void compileFunctionCallUnaryChain() {

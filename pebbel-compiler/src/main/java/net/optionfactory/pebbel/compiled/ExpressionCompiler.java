@@ -202,17 +202,26 @@ public class ExpressionCompiler
     public Class<?> visit(FunctionCall node, Request request) {
         final FunctionDescriptor descriptor = request.functions.descriptors().get(node.function);
         final Method method = request.functions.values().get(node.function);
-        for (int i = 0; i < node.arguments.length; i++) {
-            final Class<?> resultType = node.arguments[i].accept(this, request);
-            final Class<?> type;
-            if (i >= descriptor.parameters.length && descriptor.vararg) {
-                type = descriptor.parameters[descriptor.parameters.length - 1].type;
-            } else {
-                type = descriptor.parameters[i].type;
-            }
-            // if vararg and i == lastIndexNonVararg: crea array del tipo giusto
-            // if vararg and i >= lastIndexNonVararg: ?astore
+        final int nonVarargArgsCount = descriptor.parameters.length - (descriptor.vararg ? 1 : 0);
+        for (int j = 0; j < nonVarargArgsCount; j++) {
+            final Class<?> resultType = node.arguments[j].accept(this, request);
+            final Class<?> type = descriptor.parameters[j].type;
             typeAdapt(request.methodVisitor, resultType, type);
+        }
+        if (descriptor.vararg) {
+            // create array
+            final Class<?> componentClazz = descriptor.parameters[nonVarargArgsCount].type.getComponentType();
+            final Type componentType = Type.getType(componentClazz);
+            request.methodVisitor.visitIntInsn(SIPUSH, node.arguments.length - nonVarargArgsCount);
+            request.methodVisitor.visitTypeInsn(componentClazz.isPrimitive() ? NEWARRAY : ANEWARRAY, componentType.getInternalName());
+
+            for (int k = nonVarargArgsCount; k < node.arguments.length; k++) {
+                request.methodVisitor.visitInsn(DUP);
+                request.methodVisitor.visitIntInsn(SIPUSH, k - nonVarargArgsCount);
+                final Class<?> resultType = node.arguments[k].accept(this, request);
+                typeAdapt(request.methodVisitor, resultType, componentClazz);
+                request.methodVisitor.visitInsn(componentType.getOpcode(IASTORE));
+            }
         }
 
         final Label lineNumber = new Label();
