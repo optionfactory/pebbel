@@ -8,6 +8,7 @@ import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.parsing.ast.*;
 import net.optionfactory.pebbel.results.Result;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -112,6 +113,7 @@ public class ExpressionCompilerTest {
         );
     }
 
+    @Ignore
     @Test
     public void explore() throws IOException {
         final ClassReader cr = new ClassReader(new FileInputStream("/home/fdegrassi/projects/pebbel2/pebbel-compiler/target/test-classes/net/optionfactory/pebbel/compiled/Asd.class"));
