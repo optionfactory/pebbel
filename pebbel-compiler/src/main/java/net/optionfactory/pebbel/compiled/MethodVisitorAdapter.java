@@ -3,7 +3,8 @@ package net.optionfactory.pebbel.compiled;
 import org.objectweb.asm.MethodVisitor;
 
 public class MethodVisitorAdapter extends net.bytebuddy.jar.asm.MethodVisitor {
-    private MethodVisitor delegate;
+
+    private final MethodVisitor delegate;
 
     public MethodVisitorAdapter(MethodVisitor delegate) {
         super(net.bytebuddy.jar.asm.Opcodes.ASM7);

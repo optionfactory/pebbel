@@ -1,23 +1,31 @@
 package net.optionfactory.pebbel.compiled;
 
+import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicLong;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.optionfactory.pebbel.loading.Bindings;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
 import net.optionfactory.pebbel.loading.Maybe;
-import net.optionfactory.pebbel.parsing.ast.*;
+import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
+import net.optionfactory.pebbel.parsing.ast.Expression;
+import net.optionfactory.pebbel.parsing.ast.FunctionCall;
+import net.optionfactory.pebbel.parsing.ast.NumberExpression;
+import net.optionfactory.pebbel.parsing.ast.NumberLiteral;
+import net.optionfactory.pebbel.parsing.ast.ShortCircuitExpression;
+import net.optionfactory.pebbel.parsing.ast.Source;
+import net.optionfactory.pebbel.parsing.ast.StringExpression;
+import net.optionfactory.pebbel.parsing.ast.StringLiteral;
+import net.optionfactory.pebbel.parsing.ast.Variable;
 import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
-import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static org.objectweb.asm.Opcodes.*;
-
-public class ExpressionCompiler
-        extends AbstractVisitor<Class<?>, ExpressionCompiler.Request>
-        implements Expression.Visitor<Class<?>, ExpressionCompiler.Request> {
+public class ExpressionCompiler implements Expression.Visitor<Class<?>, ExpressionCompiler.Request> {
 
     private static final Type sourceType = Type.getType(Source.class);
     private static final Method sourceOf;
@@ -36,7 +44,6 @@ public class ExpressionCompiler
     private static final String targetPackage = CompiledExpression.class.getPackage().getName();
     private static final String GEN_SUBPACKAGE = "gen";
 
-
     static {
         try {
             sourceOf = Source.class.getMethod("of", int.class, int.class, int.class, int.class);
@@ -54,6 +61,7 @@ public class ExpressionCompiler
     }
 
     public static class Request {
+
         private final Bindings<String, Method, FunctionDescriptor> functions;
         private final MethodVisitor methodVisitor;
 
@@ -66,7 +74,6 @@ public class ExpressionCompiler
     private static AtomicLong i = new AtomicLong();
     private final boolean includeDebugInfo;
     private final boolean remapExceptions;
-
 
     public ExpressionCompiler() {
         this(true, true);
@@ -88,11 +95,11 @@ public class ExpressionCompiler
             final String internalName = String.join("/", targetPackage.replace('.', '/'), GEN_SUBPACKAGE, baseName);
             final String binaryName = String.join(".", targetPackage, GEN_SUBPACKAGE, baseName);
             final ClassWriter classWriter = new ClassWriter((ClassWriter.COMPUTE_MAXS));
-            classWriter.visit(V11, ACC_PUBLIC | ACC_SUPER, internalName, null, "java/lang/Object", new String[]{compiledExpressionType.getInternalName()});
+            classWriter.visit(Opcodes.V11, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, internalName, null, "java/lang/Object", new String[]{compiledExpressionType.getInternalName()});
             generateCtor(classWriter);
 
-            final MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC, evaluate.getName(), evaluateType.getDescriptor(), null, null);
-            final Request request = new Request(functionBindings, includeDebugInfo ? methodVisitor : new NoDebugMethodVisitor(ASM8, methodVisitor));
+            final MethodVisitor methodVisitor = classWriter.visitMethod(Opcodes.ACC_PUBLIC, evaluate.getName(), evaluateType.getDescriptor(), null, null);
+            final Request request = new Request(functionBindings, includeDebugInfo ? methodVisitor : new NoDebugMethodVisitor(Opcodes.ASM8, methodVisitor));
             request.methodVisitor.visitParameter("varBindings", 0);
             request.methodVisitor.visitCode();
             final Label begin = new Label();
@@ -102,7 +109,7 @@ public class ExpressionCompiler
             if (remapExceptions) {
                 request.methodVisitor.visitTryCatchBlock(tryStart, tryEnd, tryEnd, "java/lang/Throwable");
                 generateSourceUpdate(Source.of(0, 0, 0, 0), request.methodVisitor);
-                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), INTEGER, INTEGER, INTEGER, INTEGER}, 0, new Object[0]);
+                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 0, new Object[0]);
                 request.methodVisitor.visitLabel(tryStart);
             }
 
@@ -112,25 +119,25 @@ public class ExpressionCompiler
                     TypeDescription.ForLoadedType.of(expectedType).asGenericType(),
                     Assigner.Typing.DYNAMIC)
                     .apply(new MethodVisitorAdapter(request.methodVisitor), null);
-            request.methodVisitor.visitInsn(ARETURN);
+            request.methodVisitor.visitInsn(Opcodes.ARETURN);
 
             final Label end = new Label();
             if (remapExceptions) {
                 request.methodVisitor.visitLabel(tryEnd);
-                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), INTEGER, INTEGER, INTEGER, INTEGER}, 1, new Object[]{"java/lang/Throwable"});
-                request.methodVisitor.visitVarInsn(ASTORE, 6);
-                request.methodVisitor.visitTypeInsn(NEW, executionExceptionType.getInternalName());
-                request.methodVisitor.visitInsn(DUP);
-                request.methodVisitor.visitVarInsn(ALOAD, 6);
-                request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", false);
-                request.methodVisitor.visitVarInsn(ILOAD, 2);
-                request.methodVisitor.visitVarInsn(ILOAD, 3);
-                request.methodVisitor.visitVarInsn(ILOAD, 4);
-                request.methodVisitor.visitVarInsn(ILOAD, 5);
-                request.methodVisitor.visitMethodInsn(INVOKESTATIC, sourceType.getInternalName(), sourceOf.getName(), sourceOfType.getDescriptor(), false);
-                request.methodVisitor.visitVarInsn(ALOAD, 6);
-                request.methodVisitor.visitMethodInsn(INVOKESPECIAL, executionExceptionType.getInternalName(), "<init>", executionExceptionCtorType.getDescriptor(), false);
-                request.methodVisitor.visitInsn(ATHROW);
+                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 1, new Object[]{"java/lang/Throwable"});
+                request.methodVisitor.visitVarInsn(Opcodes.ASTORE, 6);
+                request.methodVisitor.visitTypeInsn(Opcodes.NEW, executionExceptionType.getInternalName());
+                request.methodVisitor.visitInsn(Opcodes.DUP);
+                request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
+                request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", false);
+                request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 2);
+                request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 3);
+                request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 4);
+                request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 5);
+                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, sourceType.getInternalName(), sourceOf.getName(), sourceOfType.getDescriptor(), false);
+                request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
+                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, executionExceptionType.getInternalName(), "<init>", executionExceptionCtorType.getDescriptor(), false);
+                request.methodVisitor.visitInsn(Opcodes.ATHROW);
                 request.methodVisitor.visitLabel(end);
                 request.methodVisitor.visitLocalVariable("sourceRow", "I", null, begin, end, 2);
                 request.methodVisitor.visitLocalVariable("sourceCol", "I", null, begin, end, 3);
@@ -154,30 +161,30 @@ public class ExpressionCompiler
     }
 
     private void generateCtor(ClassWriter classWriter) {
-        final MethodVisitor constructorVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+        final MethodVisitor constructorVisitor = classWriter.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
         constructorVisitor.visitCode();
-        constructorVisitor.visitVarInsn(ALOAD, 0);
-        constructorVisitor.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
-        constructorVisitor.visitInsn(RETURN);
+        constructorVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        constructorVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        constructorVisitor.visitInsn(Opcodes.RETURN);
         constructorVisitor.visitMaxs(1, 1);
         constructorVisitor.visitEnd();
     }
 
     private void generateSourceUpdate(Source source, MethodVisitor methodVisitor) {
         methodVisitor.visitLdcInsn(source.row);
-        methodVisitor.visitVarInsn(ISTORE, 2);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, 2);
         methodVisitor.visitLdcInsn(source.col);
-        methodVisitor.visitVarInsn(ISTORE, 3);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, 3);
         methodVisitor.visitLdcInsn(source.endRow);
-        methodVisitor.visitVarInsn(ISTORE, 4);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, 4);
         methodVisitor.visitLdcInsn(source.endCol);
-        methodVisitor.visitVarInsn(ISTORE, 5);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, 5);
     }
 
     @Override
     public Class<?> visit(NumberLiteral node, Request request) {
         request.methodVisitor.visitLdcInsn(node.value);
-        request.methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
         return Double.class;
     }
 
@@ -190,11 +197,11 @@ public class ExpressionCompiler
     @Override
     public Class<?> visit(Variable node, Request request) {
         generateSourceUpdate(node.source, request.methodVisitor);
-        request.methodVisitor.visitVarInsn(ALOAD, 1);
+        request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         request.methodVisitor.visitLdcInsn(node.name);
-        request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, bindingsType.getInternalName(), bindingsValue.getName(), bindingsValueType.getDescriptor(), false);
-        request.methodVisitor.visitInsn(ACONST_NULL);
-        request.methodVisitor.visitMethodInsn(INVOKEVIRTUAL, maybeType.getInternalName(), maybeOrElse.getName(), maybeOrElseType.getDescriptor(), false);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bindingsType.getInternalName(), bindingsValue.getName(), bindingsValueType.getDescriptor(), false);
+        request.methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, maybeType.getInternalName(), maybeOrElse.getName(), maybeOrElseType.getDescriptor(), false);
         return Object.class;
     }
 
@@ -212,15 +219,15 @@ public class ExpressionCompiler
             // create array
             final Class<?> componentClazz = descriptor.parameters[nonVarargArgsCount].type.getComponentType();
             final Type componentType = Type.getType(componentClazz);
-            request.methodVisitor.visitIntInsn(SIPUSH, node.arguments.length - nonVarargArgsCount);
-            request.methodVisitor.visitTypeInsn(componentClazz.isPrimitive() ? NEWARRAY : ANEWARRAY, componentType.getInternalName());
+            request.methodVisitor.visitIntInsn(Opcodes.SIPUSH, node.arguments.length - nonVarargArgsCount);
+            request.methodVisitor.visitTypeInsn(componentClazz.isPrimitive() ? Opcodes.NEWARRAY : Opcodes.ANEWARRAY, componentType.getInternalName());
 
             for (int k = nonVarargArgsCount; k < node.arguments.length; k++) {
-                request.methodVisitor.visitInsn(DUP);
-                request.methodVisitor.visitIntInsn(SIPUSH, k - nonVarargArgsCount);
+                request.methodVisitor.visitInsn(Opcodes.DUP);
+                request.methodVisitor.visitIntInsn(Opcodes.SIPUSH, k - nonVarargArgsCount);
                 final Class<?> resultType = node.arguments[k].accept(this, request);
                 typeAdapt(request.methodVisitor, resultType, componentClazz);
-                request.methodVisitor.visitInsn(componentType.getOpcode(IASTORE));
+                request.methodVisitor.visitInsn(componentType.getOpcode(Opcodes.IASTORE));
             }
         }
 
@@ -229,7 +236,7 @@ public class ExpressionCompiler
         request.methodVisitor.visitLineNumber(node.source.row, lineNumber);
 
         generateSourceUpdate(node.source, request.methodVisitor);
-        request.methodVisitor.visitMethodInsn(INVOKESTATIC, Type.getType(method.getDeclaringClass()).getInternalName(), method.getName(), Type.getType(method).getDescriptor(), false);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getType(method.getDeclaringClass()).getInternalName(), method.getName(), Type.getType(method).getDescriptor(), false);
         return method.getReturnType();
     }
 
@@ -240,16 +247,42 @@ public class ExpressionCompiler
             final Class<?> resultType = node.terms[i].accept(this, request);
             typeAdapt(request.methodVisitor, resultType, Boolean.class);
             if (i < node.operators.length) {
-                request.methodVisitor.visitInsn(DUP);
+                request.methodVisitor.visitInsn(Opcodes.DUP);
                 typeAdapt(request.methodVisitor, Boolean.class, boolean.class);
-                request.methodVisitor.visitJumpInsn(node.operators[i].shortCircuitsOn() ? IFNE : IFEQ, end);
-                request.methodVisitor.visitInsn(POP);
+                request.methodVisitor.visitJumpInsn(node.operators[i].shortCircuitsOn() ? Opcodes.IFNE : Opcodes.IFEQ, end);
+                request.methodVisitor.visitInsn(Opcodes.POP);
             } else {
                 request.methodVisitor.visitLabel(end);
                 request.methodVisitor.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{"java/lang/Boolean"});
             }
         }
         return Boolean.class;
+    }
+
+    @Override
+    public Class<?> visit(Expression node, Request value) {
+        // never called
+        return null;
+    }
+
+    @Override
+    public Class<?> visit(StringExpression node, Request value) {
+        // never called
+        return null;
+
+    }
+
+    @Override
+    public Class<?> visit(BooleanExpression node, Request value) {
+        // never called
+        return null;
+
+    }
+
+    @Override
+    public Class<?> visit(NumberExpression node, Request value) {
+        // never called
+        return null;
     }
 
     private void typeAdapt(MethodVisitor mv, Class<?> srcType, Class<?> dstType) {

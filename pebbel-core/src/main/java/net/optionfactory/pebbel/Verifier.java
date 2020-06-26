@@ -5,8 +5,8 @@ import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.results.Problem;
 
-public interface Verifier<VAR_METADATA_TYPE> {
+public interface Verifier<VARMETA> {
 
-    List<Problem> verify(Descriptors<VAR_METADATA_TYPE,?> descriptors, Expression expression, Class<?> expected);
+    List<Problem> verify(Descriptors<VARMETA, ?> descriptors, Expression expression, Class<?> expected);
 
 }

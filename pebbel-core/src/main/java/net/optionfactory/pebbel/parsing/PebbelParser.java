@@ -8,10 +8,6 @@ import java.util.stream.Stream;
 import net.optionfactory.pebbel.Parser;
 import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.parsing.ast.Source;
-import net.optionfactory.pebbel.parsing.JavaccParser;
-import net.optionfactory.pebbel.parsing.JavaccParserConstants;
-import net.optionfactory.pebbel.parsing.ParseException;
-import net.optionfactory.pebbel.parsing.Token;
 import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 

@@ -23,16 +23,16 @@ import net.optionfactory.pebbel.results.Problem;
  * An AST visitor verifying every symbol referenced can be linked to.
  * Accumulates verification problems.
  */
-public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor<Class<?>, Request<VAR_METADATA_TYPE>> {
+public class ExpressionVerifier<VARMETA> implements Expression.Visitor<Class<?>, Request<VARMETA>> {
 
-    public static class Request<VAR_METADATA_TYPE> {
+    public static class Request<VARMETA> {
 
-        public Descriptors<VAR_METADATA_TYPE, ?> descriptors;
+        public Descriptors<VARMETA, ?> descriptors;
         public Class<?> expected;
         public List<Problem> problems;
 
-        public static <VAR_METADATA_TYPE> Request<VAR_METADATA_TYPE> of(Descriptors<VAR_METADATA_TYPE, ?> descriptors, Class<?> expected, List<Problem> problems) {
-            final Request<VAR_METADATA_TYPE> request = new Request<>();
+        public static <VARMETA> Request<VARMETA> of(Descriptors<VARMETA, ?> descriptors, Class<?> expected, List<Problem> problems) {
+            final Request<VARMETA> request = new Request<>();
             request.problems = problems;
             request.expected = expected;
             request.descriptors = descriptors;
@@ -40,7 +40,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
         }
     }
 
-    public List<Problem> verify(Descriptors<VAR_METADATA_TYPE, ?> descriptors, Expression expression, Class<?> expected) {
+    public List<Problem> verify(Descriptors<VARMETA, ?> descriptors, Expression expression, Class<?> expected) {
         final List<Problem> problems = new ArrayList<>();
         final Class<?> got = expression.accept(this, Request.of(descriptors, expected, problems));
         if (!TypeChecks.isAssignable(expected, got)) {
@@ -50,12 +50,12 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     @Override
-    public Class<?> visit(Expression node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(Expression node, Request<VARMETA> request) {
         return node.accept(this, request);
     }
 
     @Override
-    public Class<?> visit(StringExpression node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(StringExpression node, Request<VARMETA> request) {
         final Class<?> type = node.accept(this, request);
         if (!String.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: image*/ null, null, String.class, type));
@@ -64,7 +64,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     @Override
-    public Class<?> visit(BooleanExpression node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(BooleanExpression node, Request<VARMETA> request) {
         final Class<?> type = node.accept(this, request);
         if (!Boolean.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: string*/ null, null, Boolean.class, type));
@@ -73,7 +73,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     @Override
-    public Class<?> visit(NumberExpression node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(NumberExpression node, Request<VARMETA> request) {
         final Class<?> type = node.accept(this, request);
         if (!Double.class.equals(type)) {
             request.problems.add(TYPE_MISMATCH(node.source(),/*TODO: string*/ null, null, Double.class, type));
@@ -82,26 +82,26 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     @Override
-    public Class<?> visit(NumberLiteral node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(NumberLiteral node, Request<VARMETA> request) {
         return Double.class;
     }
 
     @Override
-    public Class<?> visit(Variable node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(Variable node, Request<VARMETA> request) {
         if (!request.descriptors.variables.containsKey(node.name)) {
             request.problems.add(UNKNOWN_SYMBOL(node.source, node.name));
         }
-        final VariableDescriptor<VAR_METADATA_TYPE> var = request.descriptors.variables.get(node.name);
+        final VariableDescriptor<VARMETA> var = request.descriptors.variables.get(node.name);
         return var != null ? var.type : UnknownType.class;
     }
 
     @Override
-    public Class<?> visit(StringLiteral node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(StringLiteral node, Request<VARMETA> request) {
         return String.class;
     }
 
     @Override
-    public Class<?> visit(FunctionCall node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(FunctionCall node, Request<VARMETA> request) {
         final Class<?>[] argumentTypes = new Class<?>[node.arguments.length];
         for (int i = 0; i != node.arguments.length; ++i) {
             argumentTypes[i] = node.arguments[i].accept(this, request);
@@ -139,7 +139,7 @@ public class ExpressionVerifier<VAR_METADATA_TYPE> implements Expression.Visitor
     }
 
     @Override
-    public Class<?> visit(ShortCircuitExpression node, Request<VAR_METADATA_TYPE> request) {
+    public Class<?> visit(ShortCircuitExpression node, Request<VARMETA> request) {
         for (BooleanExpression term : node.terms) {
             final Class<?> termType = term.accept(this, request);
             if (!Boolean.class.equals(termType)) {

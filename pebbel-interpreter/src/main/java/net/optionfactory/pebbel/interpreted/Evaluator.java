@@ -4,8 +4,8 @@ import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.results.Result;
 
-public interface Evaluator<VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> {
+public interface Evaluator<VAR, VARMETA, FUN> {
 
-    <R> Result<R> evaluate(Symbols<VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> symbols, Expression expression, Class<R> expected);
+    <R> Result<R> evaluate(Symbols<VAR, VARMETA, FUN> symbols, Expression expression, Class<R> expected);
 
 }

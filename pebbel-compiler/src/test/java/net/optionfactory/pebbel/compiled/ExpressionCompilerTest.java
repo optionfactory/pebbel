@@ -1,11 +1,31 @@
 package net.optionfactory.pebbel.compiled;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import net.optionfactory.pebbel.loading.BindingHandler;
 import net.optionfactory.pebbel.loading.Bindings;
 import net.optionfactory.pebbel.loading.FunctionDescriptor;
 import net.optionfactory.pebbel.loading.PebbelFunctionsLoader;
 import net.optionfactory.pebbel.loading.VariableDescriptor;
-import net.optionfactory.pebbel.parsing.ast.*;
+import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
+import net.optionfactory.pebbel.parsing.ast.BooleanOperator;
+import net.optionfactory.pebbel.parsing.ast.Expression;
+import net.optionfactory.pebbel.parsing.ast.FunctionCall;
+import net.optionfactory.pebbel.parsing.ast.NumberLiteral;
+import net.optionfactory.pebbel.parsing.ast.ShortCircuitExpression;
+import net.optionfactory.pebbel.parsing.ast.Source;
+import net.optionfactory.pebbel.parsing.ast.StringLiteral;
+import net.optionfactory.pebbel.parsing.ast.Variable;
 import net.optionfactory.pebbel.results.Result;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -17,21 +37,11 @@ import org.objectweb.asm.util.ASMifier;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 @RunWith(Parameterized.class)
 public class ExpressionCompilerTest {
 
-    private boolean includeDebugInfo;
-    private boolean remapExceptions;
+    private final boolean includeDebugInfo;
+    private final boolean remapExceptions;
 
     public ExpressionCompilerTest(boolean includeDebugInfo, boolean remapExceptions) {
         this.includeDebugInfo = includeDebugInfo;

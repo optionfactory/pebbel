@@ -14,20 +14,18 @@ import net.optionfactory.pebbel.results.Result;
 /**
  * Load
  */
-public class PebbelFunctionsLoader<FUN_TYPE> implements FunctionsLoader<FUN_TYPE> {
+public class PebbelFunctionsLoader<FUN> implements FunctionsLoader<FUN> {
 
-    private final java.util.function.Function<Method, FUN_TYPE> factory;
+    private final java.util.function.Function<Method, FUN> factory;
 
-    public PebbelFunctionsLoader(java.util.function.Function<Method, FUN_TYPE> factory) {
+    public PebbelFunctionsLoader(java.util.function.Function<Method, FUN> factory) {
         this.factory = factory;
     }
     
-    
-    
     @Override
-    public Result<Bindings<String, FUN_TYPE, FunctionDescriptor>> load(Class<?>... classes) {
+    public Result<Bindings<String, FUN, FunctionDescriptor>> load(Class<?>... classes) {
         final List<Problem> problems = new ArrayList<>();
-        final Map<String, FUN_TYPE> functions = new HashMap<>();
+        final Map<String, FUN> functions = new HashMap<>();
         final Map<String, FunctionDescriptor> schema = new HashMap<>();
         for (Class<?> c : classes) {
             for (final Method method : c.getDeclaredMethods()) {

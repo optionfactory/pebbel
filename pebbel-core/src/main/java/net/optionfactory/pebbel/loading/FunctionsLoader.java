@@ -2,8 +2,8 @@ package net.optionfactory.pebbel.loading;
 
 import net.optionfactory.pebbel.results.Result;
 
-public interface FunctionsLoader<FUN_TYPE> {
+public interface FunctionsLoader<FUN> {
 
-    Result<Bindings<String, FUN_TYPE, FunctionDescriptor>> load(Class<?>... classes);
+    Result<Bindings<String, FUN, FunctionDescriptor>> load(Class<?>... classes);
 
 }

@@ -17,9 +17,9 @@ import net.optionfactory.pebbel.results.Result;
 /**
  * An AST visitor evaluating an expression.
  */
-public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Expression.Visitor<Object, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle>> {
+public class ExpressionEvaluator<VAR, VARMETA> implements Expression.Visitor<Object, Symbols<VAR, VARMETA, MethodHandle>> {
 
-    public <R> Result<R> evaluate(Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols, Expression expression) {
+    public <R> Result<R> evaluate(Symbols<VAR, VARMETA, MethodHandle> symbols, Expression expression) {
         try {
             return Result.value((R) expression.accept(this, symbols));
         } catch (ExecutionException ex) {
@@ -28,42 +28,42 @@ public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Express
     }
 
     @Override
-    public Object visit(Expression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Object visit(Expression node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return node.accept(this, symbols);
     }
 
     @Override
-    public Object visit(Variable node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Object visit(Variable node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return symbols.variables.value(node.name).orElse(null);
     }
 
     @Override
-    public String visit(StringLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public String visit(StringLiteral node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return node.literal;
     }
 
     @Override
-    public String visit(StringExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public String visit(StringExpression node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return (String) node.accept(this, symbols);
     }
 
     @Override
-    public Boolean visit(BooleanExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Boolean visit(BooleanExpression node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return (Boolean) node.accept(this, symbols);
     }
 
     @Override
-    public Double visit(NumberExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Double visit(NumberExpression node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return (Double) node.accept(this, symbols);
     }
 
     @Override
-    public Double visit(NumberLiteral node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Double visit(NumberLiteral node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         return node.value;
     }
 
     @Override
-    public Object visit(FunctionCall node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Object visit(FunctionCall node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         final Object[] arguments = Arrays.stream(node.arguments)
                 .map(n -> n.accept(this, symbols))
                 .toArray();
@@ -78,7 +78,7 @@ public class ExpressionEvaluator<VAR_TYPE, VAR_METADATA_TYPE> implements Express
 
 
     @Override
-    public Boolean visit(ShortCircuitExpression node, Symbols<VAR_TYPE, VAR_METADATA_TYPE, MethodHandle> symbols) {
+    public Boolean visit(ShortCircuitExpression node, Symbols<VAR, VARMETA, MethodHandle> symbols) {
         Boolean value = null;
         for (int i = 0; i != node.terms.length; ++i) {
             final BooleanExpression bexp = node.terms[i];

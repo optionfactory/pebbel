@@ -1,14 +1,14 @@
 package net.optionfactory.pebbel.loading;
 
-public class Symbols<VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> {
+public class Symbols<VAR, VARMETA, FUN> {
 
-    public Bindings<String, FUN_TYPE, FunctionDescriptor> functions;
-    public Bindings<String, VAR_TYPE, VariableDescriptor<VAR_METADATA_TYPE>> variables;
+    public Bindings<String, FUN, FunctionDescriptor> functions;
+    public Bindings<String, VAR, VariableDescriptor<VARMETA>> variables;
 
-    public static <VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> Symbols<VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> of(
-            Bindings<String, FUN_TYPE, FunctionDescriptor> functions,
-            Bindings<String, VAR_TYPE, VariableDescriptor<VAR_METADATA_TYPE>> variables) {
-        final Symbols<VAR_TYPE, VAR_METADATA_TYPE, FUN_TYPE> s = new Symbols<>();
+    public static <VAR, VARMETA, FUN> Symbols<VAR, VARMETA, FUN> of(
+            Bindings<String, FUN, FunctionDescriptor> functions,
+            Bindings<String, VAR, VariableDescriptor<VARMETA>> variables) {
+        final Symbols<VAR, VARMETA, FUN> s = new Symbols<>();
         s.functions = functions;
         s.variables = variables;
         return s;
