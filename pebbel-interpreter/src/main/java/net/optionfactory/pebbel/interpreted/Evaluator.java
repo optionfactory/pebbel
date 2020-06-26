@@ -1,7 +1,7 @@
 package net.optionfactory.pebbel.interpreted;
 
-import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.loading.Symbols;
+import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.results.Result;
 
 public interface Evaluator<VAR, VARMETA, FUN> {

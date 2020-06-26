@@ -1,13 +1,13 @@
 package net.optionfactory.pebbel;
 
-import net.optionfactory.pebbel.loading.FunctionsLoader;
 import net.optionfactory.pebbel.loading.Descriptors;
+import net.optionfactory.pebbel.loading.FunctionsLoader;
 import net.optionfactory.pebbel.loading.Symbols;
 
-public interface Loader<VER_CTX, EVAL_CTX, VAR, VARMETA, FUN> {
+public interface Loader<VAR, VARMETA, FUN> {
 
-    Descriptors<VARMETA, FUN> descriptors(VER_CTX context, FunctionsLoader fl);
+    <CTX> Descriptors<VARMETA, FUN> descriptors(CTX context, FunctionsLoader<FUN> fl);
 
-    Symbols<VAR, VARMETA, FUN> symbols(EVAL_CTX context, FunctionsLoader fl);
+    <CTX> Symbols<VAR, VARMETA, FUN> symbols(CTX context, FunctionsLoader<FUN> fl);
 
 }

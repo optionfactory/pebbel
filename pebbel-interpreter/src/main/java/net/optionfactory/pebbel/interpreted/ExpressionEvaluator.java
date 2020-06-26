@@ -2,6 +2,7 @@ package net.optionfactory.pebbel.interpreted;
 
 import java.lang.invoke.MethodHandle;
 import java.util.Arrays;
+import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
 import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.parsing.ast.FunctionCall;
@@ -11,7 +12,6 @@ import net.optionfactory.pebbel.parsing.ast.ShortCircuitExpression;
 import net.optionfactory.pebbel.parsing.ast.StringExpression;
 import net.optionfactory.pebbel.parsing.ast.StringLiteral;
 import net.optionfactory.pebbel.parsing.ast.Variable;
-import net.optionfactory.pebbel.loading.Symbols;
 import net.optionfactory.pebbel.results.Result;
 
 /**

@@ -1,8 +1,8 @@
 package net.optionfactory.pebbel.interpreted;
 
 import java.lang.invoke.MethodHandle;
-import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.loading.Symbols;
+import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.results.Result;
 
 public class PebbelEvaluator<VAR, VARMETA> implements Evaluator<VAR, VARMETA, MethodHandle> {

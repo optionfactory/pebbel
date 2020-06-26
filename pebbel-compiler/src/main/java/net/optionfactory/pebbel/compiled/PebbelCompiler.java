@@ -15,15 +15,15 @@ import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 import net.optionfactory.pebbel.verification.PebbelVerifier;
 
-public class PebbelCompiler<VER_CTX, EVAL_CTX, VAR, VARMETA> {
+public class PebbelCompiler<VAR, VARMETA> {
 
     private final Parser parser;
-    private final Verifier<VARMETA> verifier;
-    private final Loader<VER_CTX, EVAL_CTX, VAR, VARMETA, Method> loader;
+    private final Verifier verifier;
+    private final Loader<VAR, VARMETA, Method> loader;
     private final FunctionsLoader<Method> fl;
     private final CompiledExpression.Loader expressionLoader;
 
-    public PebbelCompiler(Parser parser, Verifier<VARMETA> verifier, Loader<VER_CTX, EVAL_CTX, VAR, VARMETA, Method> loader, FunctionsLoader<Method> fl, CompiledExpression.Loader expressionLoader) {
+    public PebbelCompiler(Parser parser, Verifier verifier, Loader<VAR, VARMETA, Method> loader, FunctionsLoader<Method> fl, CompiledExpression.Loader expressionLoader) {
         this.parser = parser;
         this.verifier = verifier;
         this.loader = loader;
@@ -31,15 +31,15 @@ public class PebbelCompiler<VER_CTX, EVAL_CTX, VAR, VARMETA> {
         this.expressionLoader = expressionLoader;
     }
 
-    public static <VER_CTX, EVAL_CTX, VAR, VARMETA> PebbelCompiler<VER_CTX, EVAL_CTX, VAR, VARMETA> defaults(Loader<VER_CTX, EVAL_CTX, VAR, VARMETA, Method> loader, CompiledExpression.Loader expressionLoader) {
-        return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier<>(), loader, new PebbelFunctionsLoader<>(m -> m), expressionLoader);
+    public static <VAR, VARMETA> PebbelCompiler<VAR, VARMETA> defaults(Loader<VAR, VARMETA, Method> loader, CompiledExpression.Loader expressionLoader) {
+        return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier(), loader, new PebbelFunctionsLoader<>(m -> m), expressionLoader);
     }
 
-    public Descriptors<VARMETA, Method> descriptors(VER_CTX context) {
+    public <CTX> Descriptors<VARMETA, Method> descriptors(CTX context) {
         return loader.descriptors(context, fl);
     }
 
-    public Symbols<VAR, VARMETA, Method> symbols(EVAL_CTX context) {
+    public <CTX> Symbols<VAR, VARMETA, Method> symbols(CTX context) {
         return loader.symbols(context, fl);
     }
 

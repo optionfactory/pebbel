@@ -2,6 +2,10 @@ package net.optionfactory.pebbel.verification;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.optionfactory.pebbel.loading.Descriptors;
+import net.optionfactory.pebbel.loading.FunctionDescriptor;
+import net.optionfactory.pebbel.loading.FunctionDescriptor.ParameterDescriptor;
+import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.parsing.ast.BooleanExpression;
 import net.optionfactory.pebbel.parsing.ast.Expression;
 import net.optionfactory.pebbel.parsing.ast.FunctionCall;
@@ -12,12 +16,8 @@ import net.optionfactory.pebbel.parsing.ast.Source;
 import net.optionfactory.pebbel.parsing.ast.StringExpression;
 import net.optionfactory.pebbel.parsing.ast.StringLiteral;
 import net.optionfactory.pebbel.parsing.ast.Variable;
-import net.optionfactory.pebbel.verification.ExpressionVerifier.Request;
-import net.optionfactory.pebbel.loading.Descriptors;
-import net.optionfactory.pebbel.loading.FunctionDescriptor;
-import net.optionfactory.pebbel.loading.FunctionDescriptor.ParameterDescriptor;
-import net.optionfactory.pebbel.loading.VariableDescriptor;
 import net.optionfactory.pebbel.results.Problem;
+import net.optionfactory.pebbel.verification.ExpressionVerifier.Request;
 
 /**
  * An AST visitor verifying every symbol referenced can be linked to.
