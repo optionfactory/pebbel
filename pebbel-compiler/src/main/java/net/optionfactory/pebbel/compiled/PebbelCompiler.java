@@ -15,15 +15,15 @@ import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 import net.optionfactory.pebbel.verification.PebbelVerifier;
 
-public class PebbelCompiler<VAR, VARMETA> {
+public class PebbelCompiler<VAR, VARMETA, DCTX, SCTX> {
 
     private final Parser parser;
     private final Verifier verifier;
-    private final Loader<VAR, VARMETA, Method> loader;
+    private final Loader<VAR, VARMETA, Method, DCTX, SCTX> loader;
     private final FunctionsLoader<Method> fl;
     private final CompiledExpression.Loader expressionLoader;
 
-    public PebbelCompiler(Parser parser, Verifier verifier, Loader<VAR, VARMETA, Method> loader, FunctionsLoader<Method> fl, CompiledExpression.Loader expressionLoader) {
+    public PebbelCompiler(Parser parser, Verifier verifier, Loader<VAR, VARMETA, Method, DCTX, SCTX> loader, FunctionsLoader<Method> fl, CompiledExpression.Loader expressionLoader) {
         this.parser = parser;
         this.verifier = verifier;
         this.loader = loader;
@@ -31,15 +31,15 @@ public class PebbelCompiler<VAR, VARMETA> {
         this.expressionLoader = expressionLoader;
     }
 
-    public static <VAR, VARMETA> PebbelCompiler<VAR, VARMETA> defaults(Loader<VAR, VARMETA, Method> loader, CompiledExpression.Loader expressionLoader) {
+    public static <VAR, VARMETA, DCTX, SCTX> PebbelCompiler<VAR, VARMETA, DCTX, SCTX> defaults(Loader<VAR, VARMETA, Method, DCTX, SCTX> loader, CompiledExpression.Loader expressionLoader) {
         return new PebbelCompiler<>(new PebbelParser(), new PebbelVerifier(), loader, new PebbelFunctionsLoader<>(m -> m), expressionLoader);
     }
 
-    public <CTX> Descriptors<VARMETA, Method> descriptors(CTX context) {
+    public Descriptors<VARMETA, Method> descriptors(DCTX context) {
         return loader.descriptors(context, fl);
     }
 
-    public <CTX> Symbols<VAR, VARMETA, Method> symbols(CTX context) {
+    public Symbols<VAR, VARMETA, Method> symbols(SCTX context) {
         return loader.symbols(context, fl);
     }
 

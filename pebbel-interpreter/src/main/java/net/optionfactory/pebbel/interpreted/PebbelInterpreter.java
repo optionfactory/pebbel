@@ -18,15 +18,15 @@ import net.optionfactory.pebbel.results.Problem;
 import net.optionfactory.pebbel.results.Result;
 import net.optionfactory.pebbel.verification.PebbelVerifier;
 
-public class PebbelInterpreter<VAR, VARMETA> {
+public class PebbelInterpreter<VAR, VARMETA, DCTX, SCTX> {
 
     private final Parser parser;
     private final Verifier verifier;
-    private final Loader<VAR, VARMETA, MethodHandle> loader;
+    private final Loader<VAR, VARMETA, MethodHandle, DCTX, SCTX> loader;
     private final Evaluator<VAR, VARMETA, MethodHandle> evaluator;
     private final FunctionsLoader<MethodHandle> fl;
 
-    public PebbelInterpreter(Parser parser, Verifier verifier, Loader<VAR, VARMETA, MethodHandle> loader, Evaluator<VAR, VARMETA, MethodHandle> evaluator, FunctionsLoader<MethodHandle> fl) {
+    public PebbelInterpreter(Parser parser, Verifier verifier, Loader<VAR, VARMETA, MethodHandle, DCTX, SCTX> loader, Evaluator<VAR, VARMETA, MethodHandle> evaluator, FunctionsLoader<MethodHandle> fl) {
         this.parser = parser;
         this.verifier = verifier;
         this.loader = loader;
@@ -34,7 +34,7 @@ public class PebbelInterpreter<VAR, VARMETA> {
         this.fl = fl;
     }
 
-    public static <VAR, VARMETA> PebbelInterpreter<VAR, VARMETA> defaults(Loader<VAR, VARMETA, MethodHandle> loader) {
+    public static <VAR, VARMETA, DCTX, SCTX> PebbelInterpreter<VAR, VARMETA, DCTX, SCTX> defaults(Loader<VAR, VARMETA, MethodHandle, DCTX, SCTX> loader) {
         return new PebbelInterpreter<>(new PebbelParser(), new PebbelVerifier(), loader, new PebbelEvaluator<>(), new PebbelFunctionsLoader<>(PebbelInterpreter::unreflect));
     }
 
@@ -47,11 +47,11 @@ public class PebbelInterpreter<VAR, VARMETA> {
 
     }
 
-    public <CTX> Descriptors<VARMETA, MethodHandle> descriptors(CTX context) {
+    public <CTX> Descriptors<VARMETA, MethodHandle> descriptors(DCTX context) {
         return loader.descriptors(context, fl);
     }
 
-    public <CTX> Symbols<VAR, VARMETA, MethodHandle> symbols(CTX context) {
+    public <CTX> Symbols<VAR, VARMETA, MethodHandle> symbols(SCTX context) {
         return loader.symbols(context, fl);
     }
 

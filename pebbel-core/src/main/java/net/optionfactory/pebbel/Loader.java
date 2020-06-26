@@ -4,10 +4,10 @@ import net.optionfactory.pebbel.loading.Descriptors;
 import net.optionfactory.pebbel.loading.FunctionsLoader;
 import net.optionfactory.pebbel.loading.Symbols;
 
-public interface Loader<VAR, VARMETA, FUN> {
+public interface Loader<VAR, VARMETA, FUN, DCTX, SCTX> {
 
-    <CTX> Descriptors<VARMETA, FUN> descriptors(CTX context, FunctionsLoader<FUN> fl);
+    Descriptors<VARMETA, FUN> descriptors(DCTX context, FunctionsLoader<FUN> fl);
 
-    <CTX> Symbols<VAR, VARMETA, FUN> symbols(CTX context, FunctionsLoader<FUN> fl);
+    Symbols<VAR, VARMETA, FUN> symbols(SCTX context, FunctionsLoader<FUN> fl);
 
 }
