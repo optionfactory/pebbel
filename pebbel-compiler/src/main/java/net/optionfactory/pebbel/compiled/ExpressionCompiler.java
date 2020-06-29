@@ -27,34 +27,34 @@ import org.objectweb.asm.Type;
 
 public class ExpressionCompiler implements Expression.Visitor<Class<?>, ExpressionCompiler.Request> {
 
-    private static final Type sourceType = Type.getType(Source.class);
-    private static final Method sourceOf;
-    private static final Type sourceOfType;
-    private static final Type compiledExpressionType = Type.getType(CompiledExpression.class);
-    private static final Method evaluate;
-    private static final Type evaluateType;
-    private static final Type bindingsType = Type.getType(Bindings.class);
-    private static final Method bindingsValue;
-    private static final Type bindingsValueType;
-    private static final Type executionExceptionType = Type.getType(ExecutionException.class);
-    private static final Type executionExceptionCtorType;
-    private static final Type maybeType = Type.getType(Maybe.class);
-    private static final Method maybeOrElse;
-    private static final Type maybeOrElseType;
-    private static final String targetPackage = CompiledExpression.class.getPackage().getName();
+    private static final Type SOURCE_TYPE = Type.getType(Source.class);
+    private static final Method SOURCE_OF_METHOD;
+    private static final Type SOURCE_OF_METHOD_TYPE;
+    private static final Type COMPILED_EXPRESSION_TYPE = Type.getType(CompiledExpression.class);
+    private static final Method EVALUATE_METHOD;
+    private static final Type EVALUATE_METHOD_TYPE;
+    private static final Type BINDINGS_TYPE = Type.getType(Bindings.class);
+    private static final Method BINDINGS_VALUE_METHOD;
+    private static final Type BINDINGS_VALUE_METHOD_TYPE;
+    private static final Type EXECUTION_EXCEPTION_TYPE = Type.getType(ExecutionException.class);
+    private static final Type EXECUTION_EXCEPTION_METHOD_TYPE;
+    private static final Type MAYBE_TYPE = Type.getType(Maybe.class);
+    private static final Method MAYBE_ORELSE_METHOD;
+    private static final Type MAYBE_ORELSE_METHOD_TYPE;
+    private static final String TARGET_PACKAGE = CompiledExpression.class.getPackage().getName();
     private static final String GEN_SUBPACKAGE = "gen";
 
     static {
         try {
-            sourceOf = Source.class.getMethod("of", int.class, int.class, int.class, int.class);
-            sourceOfType = Type.getType(sourceOf);
-            evaluate = CompiledExpression.class.getMethod("evaluate", Bindings.class);
-            evaluateType = Type.getType(evaluate);
-            bindingsValue = Bindings.class.getMethod("value", Object.class);
-            bindingsValueType = Type.getType(bindingsValue);
-            executionExceptionCtorType = Type.getType(ExecutionException.class.getConstructor(String.class, Source.class, Throwable.class));
-            maybeOrElse = Maybe.class.getMethod("orElse", Object.class);
-            maybeOrElseType = Type.getType(maybeOrElse);
+            SOURCE_OF_METHOD = Source.class.getMethod("of", int.class, int.class, int.class, int.class);
+            SOURCE_OF_METHOD_TYPE = Type.getType(SOURCE_OF_METHOD);
+            EVALUATE_METHOD = CompiledExpression.class.getMethod("evaluate", Bindings.class);
+            EVALUATE_METHOD_TYPE = Type.getType(EVALUATE_METHOD);
+            BINDINGS_VALUE_METHOD = Bindings.class.getMethod("value", Object.class);
+            BINDINGS_VALUE_METHOD_TYPE = Type.getType(BINDINGS_VALUE_METHOD);
+            EXECUTION_EXCEPTION_METHOD_TYPE = Type.getType(ExecutionException.class.getConstructor(String.class, Source.class, Throwable.class));
+            MAYBE_ORELSE_METHOD = Maybe.class.getMethod("orElse", Object.class);
+            MAYBE_ORELSE_METHOD_TYPE = Type.getType(MAYBE_ORELSE_METHOD);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -92,13 +92,13 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
         }
         try {
             final String baseName = "Compiled" + i.incrementAndGet();
-            final String internalName = String.join("/", targetPackage.replace('.', '/'), GEN_SUBPACKAGE, baseName);
-            final String binaryName = String.join(".", targetPackage, GEN_SUBPACKAGE, baseName);
+            final String internalName = String.join("/", TARGET_PACKAGE.replace('.', '/'), GEN_SUBPACKAGE, baseName);
+            final String binaryName = String.join(".", TARGET_PACKAGE, GEN_SUBPACKAGE, baseName);
             final ClassWriter classWriter = new ClassWriter((ClassWriter.COMPUTE_MAXS));
-            classWriter.visit(Opcodes.V11, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, internalName, null, "java/lang/Object", new String[]{compiledExpressionType.getInternalName()});
+            classWriter.visit(Opcodes.V11, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, internalName, null, "java/lang/Object", new String[]{COMPILED_EXPRESSION_TYPE.getInternalName()});
             generateCtor(classWriter);
 
-            final MethodVisitor methodVisitor = classWriter.visitMethod(Opcodes.ACC_PUBLIC, evaluate.getName(), evaluateType.getDescriptor(), null, null);
+            final MethodVisitor methodVisitor = classWriter.visitMethod(Opcodes.ACC_PUBLIC, EVALUATE_METHOD.getName(), EVALUATE_METHOD_TYPE.getDescriptor(), null, null);
             final Request request = new Request(functionBindings, includeDebugInfo ? methodVisitor : new NoDebugMethodVisitor(Opcodes.ASM8, methodVisitor));
             request.methodVisitor.visitParameter("varBindings", 0);
             request.methodVisitor.visitCode();
@@ -109,7 +109,7 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
             if (remapExceptions) {
                 request.methodVisitor.visitTryCatchBlock(tryStart, tryEnd, tryEnd, "java/lang/Throwable");
                 generateSourceUpdate(Source.of(0, 0, 0, 0), request.methodVisitor);
-                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 0, new Object[0]);
+                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, BINDINGS_TYPE.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 0, new Object[0]);
                 request.methodVisitor.visitLabel(tryStart);
             }
 
@@ -124,9 +124,9 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
             final Label end = new Label();
             if (remapExceptions) {
                 request.methodVisitor.visitLabel(tryEnd);
-                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, bindingsType.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 1, new Object[]{"java/lang/Throwable"});
+                request.methodVisitor.visitFrame(Opcodes.F_FULL, 6, new Object[]{internalName, BINDINGS_TYPE.getInternalName(), Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER, Opcodes.INTEGER}, 1, new Object[]{"java/lang/Throwable"});
                 request.methodVisitor.visitVarInsn(Opcodes.ASTORE, 6);
-                request.methodVisitor.visitTypeInsn(Opcodes.NEW, executionExceptionType.getInternalName());
+                request.methodVisitor.visitTypeInsn(Opcodes.NEW, EXECUTION_EXCEPTION_TYPE.getInternalName());
                 request.methodVisitor.visitInsn(Opcodes.DUP);
                 request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
                 request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", false);
@@ -134,9 +134,9 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
                 request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 3);
                 request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 4);
                 request.methodVisitor.visitVarInsn(Opcodes.ILOAD, 5);
-                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, sourceType.getInternalName(), sourceOf.getName(), sourceOfType.getDescriptor(), false);
+                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, SOURCE_TYPE.getInternalName(), SOURCE_OF_METHOD.getName(), SOURCE_OF_METHOD_TYPE.getDescriptor(), false);
                 request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
-                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, executionExceptionType.getInternalName(), "<init>", executionExceptionCtorType.getDescriptor(), false);
+                request.methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, EXECUTION_EXCEPTION_TYPE.getInternalName(), "<init>", EXECUTION_EXCEPTION_METHOD_TYPE.getDescriptor(), false);
                 request.methodVisitor.visitInsn(Opcodes.ATHROW);
                 request.methodVisitor.visitLabel(end);
                 request.methodVisitor.visitLocalVariable("sourceRow", "I", null, begin, end, 2);
@@ -148,7 +148,7 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
                 request.methodVisitor.visitLabel(end);
             }
             request.methodVisitor.visitLocalVariable("this", String.format("L%s;", internalName), null, begin, end, 0);
-            request.methodVisitor.visitLocalVariable("varBindings", String.format("L%s;", bindingsType.getInternalName()), null, begin, end, 1);
+            request.methodVisitor.visitLocalVariable("varBindings", String.format("L%s;", BINDINGS_TYPE.getInternalName()), null, begin, end, 1);
             request.methodVisitor.visitMaxs(0, 0);
             request.methodVisitor.visitEnd();
             classWriter.visitEnd();
@@ -199,9 +199,9 @@ public class ExpressionCompiler implements Expression.Visitor<Class<?>, Expressi
         generateSourceUpdate(node.source, request.methodVisitor);
         request.methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         request.methodVisitor.visitLdcInsn(node.name);
-        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bindingsType.getInternalName(), bindingsValue.getName(), bindingsValueType.getDescriptor(), false);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, BINDINGS_TYPE.getInternalName(), BINDINGS_VALUE_METHOD.getName(), BINDINGS_VALUE_METHOD_TYPE.getDescriptor(), false);
         request.methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, maybeType.getInternalName(), maybeOrElse.getName(), maybeOrElseType.getDescriptor(), false);
+        request.methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, MAYBE_TYPE.getInternalName(), MAYBE_ORELSE_METHOD.getName(), MAYBE_ORELSE_METHOD_TYPE.getDescriptor(), false);
         return Object.class;
     }
 
