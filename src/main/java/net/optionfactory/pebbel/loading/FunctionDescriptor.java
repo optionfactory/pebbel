@@ -59,6 +59,11 @@ public class FunctionDescriptor {
             return fp;
         }
 
+        @Override
+        public String toString() {
+            return String.format("%s %s", type, name);
+        }
+
     }
 
 }
