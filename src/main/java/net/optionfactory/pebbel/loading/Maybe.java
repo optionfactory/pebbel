@@ -5,10 +5,9 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Like Optional<T> but allows null values.
+ * Like Optional but allows null values.
  *
  * @author rferranti
- * @param <T>
  */
 public class Maybe<T> {
 

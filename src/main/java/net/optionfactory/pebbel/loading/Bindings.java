@@ -67,14 +67,6 @@ public class Bindings<K, V, D> {
         return leaf;
     }
 
-    /**
-     * <code>
-     * in:
-     *   self: 1->2, arg: a->b
-     * out:
-     *   a->b->1->2
-     * </code>
-     */
     public Bindings<K, V, D> overlaidBy(Bindings<K, V, D> children) {
         return children.overlaying(this);
     }
